@@ -1,0 +1,182 @@
+================================================================================
+PROJEKT-VORGABE: ACO FÜR DAS RUCKSACKPROBLEM (KNAPSACK PROBLEM)
+================================================================================
+
+PROJEKT-KONTEXT:
+- Studiengang: Master of Science - Optimierung und Simulation [cite: 1]
+- Veranstaltung: Bionische Methoden der Optimierung (Prof. Dr. B. Bachmann) [cite: 1]
+- Semester: SoSe 2026 [cite: 1]
+- Aufgabe: Ameisenalgorithmus (ACO) und das Rucksackproblem (Aufgabe 18). [cite: 21, 22]
+- Ziel: Entwicklung einer Codierung, Parameteroptimierung, Programmierung 
+        und Test mit verschiedenen Rucksackgrößen[cite: 21, 22]. Abgabe inkl. 10-Minuten-
+        Präsentation und einer Parameterstudie (Performance)[cite: 30].
+
+================================================================================
+1. DAS GRUNDPRINZIP DER CODIERUNG & ENTSCHEIDUNGSLOGIK
+================================================================================
+Anstatt Wege zwischen Städten zu suchen, laufen die Ameisen sequenziell eine 
+starre Liste von Gegenständen (Items 1 bis N) ab. 
+
+An jedem Gegenstand steht die Ameise vor einer binären Entscheidung (Kreuzung):
+- Weg 1 (JA): Der Gegenstand wird in den Rucksack gepackt.
+- Weg 0 (NEIN): Der Gegenstand wird liegengelassen.
+
+Jedes Item verwaltet seine eigenen Pheromonwerte für beide Entscheidungswege 
+(pheromon_ja / pheromon_nein). Damit entfällt eine globale Pheromon-Matrix.
+
+Um ungültige Lösungen (Überladung) von vornherein auszuschließen, führt die 
+Ameise vor jedem Item einen "Look-Ahead-Check" durch. Überschreitet das Item das 
+Limit, wird die ACO-Berechnung übersprungen und die Entscheidung starr auf 0 gesetzt.
+
+================================================================================
+2. DETAILLIERTE KLASSENSTRUKTUR UND ARCHITEKTUR
+================================================================================
+
+--------------------------------------------------------------------------------
+KLASSE: Item (Gegenstand)
+--------------------------------------------------------------------------------
+Beschreibung:
+Repräsentiert ein einzelnes zu optimierendes Objekt und verwaltet die darauf 
+liegenden Pheromonspuren.
+
+Konstruktor / Initialisierung (__init__):
+Beim Erstellen ("Installieren") des Objekts müssen ID, Gewicht und Wert übergeben 
+werden. Daraus werden die statischen Heuristiken und Start-Pheromone erzeugt.
+
+Attribute:
+- id: Eindeutiger Identifikator (Integer)
+- gewicht: Gewicht des Items (Float/Integer)
+- wert: Nutzen/Wert des Items (Float/Integer)
+- attraktivitaet_ja: Statische Gier-Heuristik für JA (Formel: wert / gewicht)
+- attraktivitaet_nein: Statische Gier-Heuristik für NEIN (Formel: gewicht / wert)
+- pheromon_ja: Aktueller Pheromonwert für JA-Weg (Float, Startwert fest auf 0.1)
+- pheromon_nein: Aktueller Pheromonwert für NEIN-Weg (Float, Startwert fest auf 0.1)
+
+Methoden:
+- verdampfe_pheromone(evaporations_rate):
+    Verringert sowohl pheromon_ja als auch pheromon_nein um den Prozentsatz 
+    der Evaporationsrate (Formel: pheromon = pheromon * (1 - evaporations_rate)).
+
+--------------------------------------------------------------------------------
+KLASSE: Ameise (Ant)
+--------------------------------------------------------------------------------
+Beschreibung:
+Repräsentiert einen einzelnen Agenten, der eine Rucksack-Kombination generiert.
+
+Konstruktor / Initialisierung (__init__):
+Beim Erstellen wird das maximale Gewichtslimit (max_last) fest an das Objekt 
+übergeben. Anschließend wird die interne reset()-Methode aufgerufen.
+
+Attribute:
+- max_last: Das maximale Gewichtslimit des Rucksacks (Float/Integer)
+- rucksack_array: Dynamische Liste der binären Entscheidungen (z.B. [1, 0, 1, 1, 0])
+- aktuelle_last: Summe der Gewichte aller bisher eingepackten Items (Float/Integer)
+- aktueller_wert: Summe der Werte aller bisher eingepackten Items (Fitness-Wert)
+
+Methoden:
+- reset():
+    Leert das rucksack_array, setzt aktuelle_last = 0 und aktueller_wert = 0. 
+    Das Attribut max_last bleibt unverändert erhalten. Wird vor jeder neuen 
+    Runde aufgerufen.
+
+- vorab_overload_check(item):
+    Prüft VOR einer Entscheidung, ob (aktuelle_last + item.gewicht) > max_last ist.
+    Gibt True zurück, wenn das Item den Rucksack überladen würde, andernfalls False.
+    
+- treffe_entscheidung(item, alpha, beta):
+    Hauptlogik für ein einzelnes Item:
+    1. Rufe vorab_overload_check(item) auf.
+    2. Wenn True (Überladung droht): 
+       - Setze Entscheidung fest auf 0 (NEIN).
+    3. Wenn False (Gegenstand passt rein):
+       - Berechne ACO-Übergangswerte basierend auf Pheromon (Tau) und Gier (Eta):
+         wert_ja = (item.pheromon_ja)^alpha * (item.attraktivitaet_ja)^beta
+         wert_nein = (item.pheromon_nein)^alpha * (item.attraktivitaet_nein)^beta
+       - Berechne die Wahrscheinlichkeit für JA (P_ja): 
+         P_ja = wert_ja / (wert_ja + wert_nein)
+       - Erzeuge Zufallszahl R zwischen 0.0 und 1.0. 
+         Ist R < P_ja -> Entscheidung = 1 (JA), ansonsten -> Entscheidung = 0 (NEIN).
+    4. Entscheidung umsetzen:
+       - Hänge Entscheidung an rucksack_array an.
+       - Wenn Entscheidung == 1: 
+         aktuelle_last += item.gewicht
+         aktueller_wert += item.wert
+
+================================================================================
+3. ABLAUFLOGIK (MAIN / MANAGER)
+================================================================================
+Das Hauptprogramm steuert die Epochen (Iterationen), das Logging und das Pheromon-Update:
+
+1. Initialisierung des Systems:
+   - Definiere Rucksack-Limit (MAX_GEWICHT).
+   - Instanziiere die Testinstanz (Liste von N Item-Objekten mit ID, Gewicht, Wert).
+   - Setze Parameter fest (ANZAHL_AMEISEN, MAX_ITERATIONEN, ALPHA, BETA, EVAPORATION).
+   - Instanziiere die Kolonie (Liste von X Ameisen-Objekten, jeweils mit MAX_GEWICHT).
+   - Erstelle leere Listen für das Tracking: beste_fitness_pro_runde[], schnitt_fitness_pro_runde[].
+
+2. Hauptschleife (Für jede Iteration von 1 bis MAX_ITERATIONEN):
+   A. FÜR JEDE Ameise in der Kolonie:
+        - Rufe ameise.reset() auf.
+        - FÜR JEDES Item in der globalen Item-Liste:
+             - Rufe ameise.treffe_entscheidung(item, ALPHA, BETA) auf.
+   B. Nach Durchlauf aller Ameisen: 
+        - Evaluiere die beste Ameise dieser Runde (höchster aktueller_wert).
+        - Vergleiche mit der "All-Time-Best"-Ameise und aktualisiere diese bei Bedarf.
+   C. Daten-Historie für die Lernkurve speichern:
+        - Hänge den Wert der Runden-Besten an beste_fitness_pro_runde an.
+        - Berechne den Noten/Wert-Durchschnitt aller Ameisen dieser Runde und 
+          hänge ihn an schnitt_fitness_pro_runde an.
+   D. Visualisierungs-Trigger (Pfade):
+        - Wenn aktuelle Iteration in [1, 5, 20, 50, MAX_ITERATIONEN]:
+          Übergebe die aktuelle Kolonie-Liste an die Pfad-Visualisierungsfunktion.
+   E. Pheromon-Update (Verdampfung & Belohnung):
+        - FÜR JEDES Item in der globalen Item-Liste:
+             - Rufe item.verdampfe_pheromone(EVAPORATION) auf.
+        - Nimm die "All-Time-Best"-Ameise (oder die Rundenbeste) und belohne ihren Weg:
+          FÜR JEDES Item (Index i von 0 bis N-1):
+             - Wenn AllTimeBest.rucksack_array[i] == 1 -> item_liste[i].pheromon_ja += bonus
+             - Wenn AllTimeBest.rucksack_array[i] == 0 -> item_liste[i].pheromon_nein += bonus
+             (Formel-Empfehlung: bonus = AllTimeBest.aktueller_wert * 0.1)
+
+3. Auswertung nach Ablauf der Schleife:
+   - Rufe Plot-Funktion für die Lernkurve auf.
+   - Ausgabe des besten gefundenen Rucksack-Arrays und dessen Gesamtgewicht & Wert.
+
+================================================================================
+4. VISUALISIERUNGS-KONZEPTE FÜR DIE PARAMETERSTUDIE
+================================================================================
+
+--------------------------------------------------------------------------------
+GRAFIK 1: Der transparente Pfad-Vergleich (Ameisenwege im Zeitverlauf)
+--------------------------------------------------------------------------------
+Ziel: Visueller Nachweis über das kollektive Festlegen (Konvergieren) der Gruppe.
+Achsen:
+- X-Achse: Gegenstands-ID (0 bis N-1)
+- Y-Achse: Binäre Entscheidung (Diskrete Werte: 0 = NEIN, 1 = JA)
+Plot-Methode:
+- Die rucksack_array-Pfade ALLER Ameisen der getriggerten Runde werden als 
+  Zickzack-Linien in dasselbe Diagramm gezeichnet.
+- Wichtig: Eine hohe Transparenz wählen (z.B. color='blue', alpha=0.15, linewidth=2).
+Effekt in der Präsentation:
+- Iteration 1 zeigt ein wildes, dichtes, hellblaues Fadengewirr (purer Zufall).
+- Die finale Iteration zeigt eine einzige, messerscharfe, dicke, dunkelblaue 
+  Zickzack-Linie. Alle Ameisen wählen exakt dieselben optimalen Pfade.
+
+--------------------------------------------------------------------------------
+GRAFIK 2: Die Lernkurve (Kofferwert über Iterationsschritte)
+--------------------------------------------------------------------------------
+Ziel: Dokumentation der Optimierungsgeschwindigkeit und Stabilität für den Professor[cite: 30].
+Achsen:
+- X-Achse: Iterationsschritte (1 bis MAX_ITERATIONEN)
+- Y-Achse: Erzielter Rucksack-Gesamtwert (Nutzen / Euro)
+Plot-Methode:
+- Es werden zwei Linien über den gesamten Zeitverlauf gezeichnet:
+  Linie 1: Werte aus beste_fitness_pro_runde (Fortschritt der Spitze)
+  Linie 2: Werte aus schnitt_fitness_pro_runde (Verhalten der Masse)
+Effekt in der Präsentation:
+- Zu Beginn klafft eine große Lücke: Die Spitze findet schnell gute Werte (Linie 1 steigt), 
+  während die Masse wegen der Exploration weit darunter schwankt (Linie 2).
+- Mit fortschreitender Zeit nähert sich Linie 2 der Linie 1 asymptotisch an.
+- Bei vollständiger Konvergenz verlaufen beide Linien absolut flach, starr und 
+  nahezu deckungsgleich auf einem gemeinsamen Qualitäts-Plateau.
+================================================================================
