@@ -4,9 +4,9 @@ from item import item
 import visualization
 
 def main():
-    number_items = 10
-    group_size = 5
-    max_load = 15
+    number_items = 50
+    group_size = 10
+    max_load = 20
     evaporation_rate = 0.1
     iterations = 100
     alpha = 0.5
@@ -32,6 +32,9 @@ def main():
     ants = []
     for i in range(group_size):
         ants.append(ant(max_load))
+        
+    # Setup Live-Plot
+    fig, ax1, ax2 = visualization.setup_live_plot()
         
     # main loop
     for iteration in range(iterations):
@@ -61,9 +64,8 @@ def main():
             decision = global_best_backpack[current_item.id]
             current_item.add_reward(decision, global_best_value)
             
-        # Visualisierungs-Trigger (Pfade) gemäß Vorgabe 3D
-        if (iteration + 1) in [1, 5, 20, 50, iterations]:
-            visualization.plot_paths(ants, iteration + 1, number_items)
+        # Live-Visualisierung in jedem Schritt aktualisieren
+        visualization.update_live_plot(fig, ax1, ax2, ants, iteration + 1, number_items, best_fitness_per_round, avg_fitness_per_round)
 
     # Auswertung
     print("=== OPTIMIERUNG ABGESCHLOSSEN ===")
@@ -71,8 +73,8 @@ def main():
     print(f"Benutztes Gewicht:    {global_best_weight} / {max_load}")
     print(f"Rucksack-Belegung:    {global_best_backpack}")
     
-    # Lernkurve generieren gemäß Vorgabe 3-Auswertung
-    visualization.plot_learning_curve(best_fitness_per_round, avg_fitness_per_round)
+    # Am Ende das Fenster offen lassen
+    visualization.show_final()
 
 if __name__ == "__main__":
     main()
