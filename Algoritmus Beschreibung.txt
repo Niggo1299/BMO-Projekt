@@ -1,0 +1,88 @@
+================================================================================
+MATHEMATISCHE FORMELN: ACO FÜR DAS RUCKSACKPROBLEM
+================================================================================
+Basierend auf den Vorlesungsfolien "Bionische Methoden der Optimierung" (HSO)
+Semesterschwerpunkt: SoSe 2026 | Prof. Dr. B. Bachmann
+================================================================================
+
+--------------------------------------------------------------------------------
+1. INITIALISIERUNG DER PHEROMONE (Folie 4)
+--------------------------------------------------------------------------------
+Im Skript wird für das TSP eine einheitliche Markierung aller Kanten vorgeschlagen.
+Für das binäre Rucksackproblem wird dies direkt auf die beiden Wege (JA/NEIN) 
+eines jeden Items i übertragen. Zu Beginn (t=0) gilt für alle Gegenstände:
+
+    Tau_ja,0 = Tau_nein,0 = 0.1
+
+--------------------------------------------------------------------------------
+2. DIE STATISCHE HEURISTIK / ATTRAKTIVITÄT Eta (Folie 4)
+--------------------------------------------------------------------------------
+Laut Vorlesung ist die heuristische Information Eta_ij die Inverse der Kosten 
+(1 / c_ij). Da das Rucksackproblem ein Maximierungsproblem ist, wird die 
+Attraktivität wie folgt für die beiden binären Pfade definiert:
+
+A) Für den JA-Weg (Gegenstand einpacken):
+   Ein Item ist umso attraktiver, je höher sein Wert bei geringem Gewicht ist.
+   
+    Eta_ja = wert / gewicht
+
+B) Für den NEIN-Weg (Gegenstand liegenlassen):
+   Ein Item ist umso attraktiver liegenzulassen (Schutz vor Überladung), 
+   je schwerer es ist und je weniger Wert es besitzt.
+   
+    Eta_nein = gewicht / wert
+
+--------------------------------------------------------------------------------
+3. DIE ENTSCHEIDUNGSWAHRSCHEINLICHKEIT p (Folie 5)
+--------------------------------------------------------------------------------
+Die Formel aus dem Skript zur Bestimmung der Auswahlwahrscheinlichkeit lautet:
+
+    p_ij = ( [Tau_ij]^alpha * [Eta_ij]^beta ) / Summe( [Tau_il]^alpha * [Eta_il]^beta )
+
+Da es an jedem Item exakt zwei erlaubte Nachfolgerwege (l in {ja, nein}) gibt, 
+sofern der Vorab-Overload-Check der Ameise erfolgreich war, berechnet sich die 
+Wahrscheinlichkeit für den JA-Weg wie folgt:
+
+Schritt 1: Berechnung der gewichteten Übergangswerte (Zähler)
+    A_ja   = (Tau_ja)^alpha   * (Eta_ja)^beta
+    A_nein = (Tau_nein)^alpha * (Eta_nein)^beta
+
+Schritt 2: Berechnung der exakten Wahrscheinlichkeit für JA (p_ja)
+    p_ja = A_ja / (A_ja + A_nein)
+
+Selektionsmethode (Folie 5):
+Laut Skript erfolgt die Knotenbestimmung über "Rouletterad-Selektion". Im binären 
+Fall wird dies im Code über eine Zufallszahl R im Intervall [0.0, 1.0] simuliert:
+    Wenn R < p_ja  -> Wähle Weg 1 (JA)
+    Ansonsten      -> Wähle Weg 0 (NEIN)
+
+--------------------------------------------------------------------------------
+4. PHEROMON-UPDATE: VERDUNSTUNG & BELOHNUNG (Folie 8 & 10)
+--------------------------------------------------------------------------------
+Es wird das im Skript bevorzugte "Ant-Cycle"-Verfahren angewendet. Das Update 
+erfolgt erst nach Abschluss der vollständigen Rucksäckturen aller m Ameisen.
+
+Die globale Aktualisierungsregel lautet:
+    Tau_t+1 = (1 - rho) * Tau_t + Summe_von_k=1_bis_m( Delta_Tau_k )
+
+Wobei rho der Verdunstungsfaktor (0 <= rho <= 1) ist.
+
+Schritt A: Lokale Verdunstung (Evaporation) bei ALLEN Items:
+    Tau_ja   = (1 - rho) * Tau_ja
+    Tau_nein = (1 - rho) * Tau_nein
+
+Schritt B: Belohnung (Delta_Tau) durch die beste Ameise (Elitäres System, Folie 11):
+Im Skript ist die Belohnung Delta_Tau_k umgekehrt proportional zur Länge (1 / C_k).
+Da beim Rucksackproblem der Gesamtwert MAXIMIERT werden soll, erhalten bessere 
+Lösungen proportional MEHR Pheromon (direkte Kopplung an den Kofferwert).
+
+Für jedes Item i, das von der "All-Time-Best"-Ameise (bs) begangen wurde, gilt:
+
+- Wenn die beste Ameise das Item eingepackt hat (Entscheidung = 1):
+    Tau_ja_i = Tau_ja_i + Delta_Tau_bs
+    Wobei: Delta_Tau_bs = Gesamt_Wert_der_besten_Ameise * 0.1
+
+- Wenn die beste Ameise das Item liegengelassen hat (Entscheidung = 0):
+    Tau_nein_i = Tau_nein_i + Delta_Tau_bs
+    Wobei: Delta_Tau_bs = Gesamt_Wert_der_besten_Ameise * 0.1
+================================================================================

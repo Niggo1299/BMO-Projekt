@@ -1,3 +1,5 @@
+import random
+
 class ant:
     def __init__(self, max_load):
         self.max_weight = max_load
@@ -20,23 +22,22 @@ class ant:
             self.backpack.append(0)
             return False
         
-        attractiveness_yes = item.attractiveness_yes ** beta
-        attractiveness_no = item.attractiveness_no ** beta
-        pheromone_yes = item.pheromone_yes ** alpha
-        pheromone_no = item.pheromone_no ** alpha
+        # Schritt 1: Berechnung der gewichteten Übergangswerte (Zähler)
+        # A_ja = (Tau_ja)^alpha * (Eta_ja)^beta
+        a_yes = (item.pheromone_yes ** alpha) * (item.attractiveness_yes ** beta)
         
-        prob_yes = attractiveness_yes * pheromone_yes
-        prob_no = attractiveness_no * pheromone_no
+        # A_nein = (Tau_nein)^alpha * (Eta_nein)^beta
+        a_no = (item.pheromone_no ** alpha) * (item.attractiveness_no ** beta)
         
-        total_prob = prob_yes + prob_no
+        total_a = a_yes + a_no
         
-        if total_prob == 0:
+        if total_a == 0:
+            self.backpack.append(0)
             return False
         
-        prob_yes /= total_prob
-        prob_no /= total_prob
+        # Schritt 2: Berechnung der exakten Wahrscheinlichkeit für JA (p_ja)
+        prob_yes = a_yes / total_a
         
-        import random
         rand_value = random.random()
         
         if rand_value < prob_yes:
