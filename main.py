@@ -6,11 +6,11 @@ import visualization
 
 def main():
     
-    group_size = 10
-    evaporation_rate = 0.9
+    group_size = 10         # Anzahl Ameisen pro Iteration
+    evaporation_rate = 0.5  # Verdampfung der Pheromone pro Iteration
     iterations = 100
-    alpha = 0.5
-    beta = 0.5
+    alpha = 0.5             # Einfluss der Pheromone
+    beta = 0.5            # Einfluss der Heuristik (Wert/Gewicht)
     
     # Listen für das Tracking (Lernkurve)
     best_fitness_per_round = []
@@ -71,7 +71,7 @@ def main():
             current_item.add_reward(decision, global_best_value)
             
         # Live-Visualisierung in jedem Schritt aktualisieren
-        visualization.update_live_plot(fig, ax1, ax2, ants, iteration + 1, number_items, best_fitness_per_round, avg_fitness_per_round)
+        visualization.update_live_plot(fig, ax1, ax2, items, iteration + 1, number_items, best_fitness_per_round, avg_fitness_per_round)
 
     # Auswertung
     print("=== OPTIMIERUNG ABGESCHLOSSEN ===")

@@ -5,17 +5,23 @@ def setup_live_plot():
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 10))
     return fig, ax1, ax2
 
-def update_live_plot(fig, ax1, ax2, ants, iteration, total_items, best_fitness, avg_fitness):
-    # Linker Plot: Wege (Pfade)
+def update_live_plot(fig, ax1, ax2, items, iteration, total_items, best_fitness, avg_fitness):
+    # Linker Plot: Pheromonspuren
     ax1.clear()
     x_axis = range(total_items)
-    for ant in ants:
-        ax1.plot(x_axis, ant.backpack, color='blue', alpha=0.15, linewidth=2)
-    ax1.set_title(f'Ameisenwege - Iteration {iteration}')
+    
+    yes_pheromones = [item.pheromone_yes for item in items]
+    no_pheromones = [-item.pheromone_no for item in items]  # Negativ für y- Achse
+    
+    ax1.bar(x_axis, yes_pheromones, color='green', label='JA Pheromon', alpha=0.7)
+    ax1.bar(x_axis, no_pheromones, color='red', label='NEIN Pheromon', alpha=0.7)
+    
+    ax1.axhline(0, color='black', linewidth=1) # Nulllinie
+    ax1.set_title(f'Pheromonspuren - Iteration {iteration}')
     ax1.set_xlabel('Gegenstands-ID')
-    ax1.set_ylabel('Entscheidung (0 = NEIN, 1 = JA)')
-    ax1.set_yticks([0, 1])
+    ax1.set_ylabel('Pheromonmenge (JA + / NEIN -)')
     ax1.set_xticks(x_axis)
+    ax1.legend(loc='upper right')
     ax1.grid(axis='y', linestyle='--', alpha=0.7)
 
     # Rechter Plot: Lernkurve

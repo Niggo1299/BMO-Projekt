@@ -13,7 +13,7 @@ class item:
         self.pheromone_no = (1 - evaporation_rate) * self.pheromone_no
         
     def add_reward(self, decision, best_value):
-        delta_tau = best_value * 0.1
+        delta_tau = best_value * 0.001
         if decision == 1:
             self.pheromone_yes += delta_tau
         else:
