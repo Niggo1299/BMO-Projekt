@@ -1,0 +1,27 @@
+Der Ameisen-Algorithmus besteht unabhaengig von der Variante aus zwei Hauptphasen, der probabilistischen Knotenbestimmung und der Pheromon-Aktualisierung
+. Die Knotenbestimmung laeuft ueberall gleich ab: Die Wahrscheinlichkeit, dass eine Ameise zum naechsten Knoten geht, wird ueber die Rouletterad-Selektion berechnet
+. Dabei werden der aktuelle Pheromonwert der Kante und eine heuristische Information, naemlich der Kehrwert der Streckenlaenge, miteinander kombiniert
+. Der eigentliche Unterschied zwischen den Varianten liegt in den Regeln zum Pheromon-Update.
+Bei der Variante Ant-Density nimmt die Pheromonspur in jedem Zeitschritt auf den Kanten proportional zu den Ameisen zu, die diese Kante nutzen
+. Alle Ameisen werden dabei voellig gleich behandelt und legen gleich gewichtete Spuren ab
+. In der Berechnung fuegt jede Ameise auf ihrem Weg folglich eine konstante Menge an Pheromon hinzu, ohne dass die Laenge der Kante oder der Gesamttour in die Berechnung der abgelegten Pheromonmenge einfliesst
+.
+Bei der Variante Ant-Quantity wird die Pheromonmenge stattdessen anhand der lokalen Kantenlaenge berechnet. Die Zunahme der Pheromonspur durch jede Ameise ist umgekehrt proportional zur Laenge der jeweils gewaehlten Kante
+. Kurze Teilstuecke erhalten dadurch im Zeitablauf ueberproportional stark markierte Spuren, was nachfolgende Ameisen an jedem Knoten gezielt motiviert, diese kurzen Teilstuecke auszuwaehlen
+.
+Die bevorzugte Variante ist das Modell Ant-Cycle
+. Hierbei werden neue Markierungen aller Ameisen erst nach dem Abschluss einer kompletten Rundtour berechnet, wodurch globale Informationen des gesamten Ameisenschwarms genutzt werden koennen
+. Die mathematische Formel fuer das Update multipliziert zunaechst das bisherige Pheromon mit einem Faktor, der die natuerliche Verdunstung beruecksichtigt
+. Anschliessend wird die neue Pheromonmenge addiert, welche sich aus dem Kehrwert der Gesamtlänge der Tour der jeweiligen Ameise berechnet
+. Kurze Gesamtstrecken werden dadurch in jedem Lauf deutlich staerker betont als laengere Strecken
+.
+Das Elitaere Ameisen System (EAS) erweitert diese grundlegende Berechnung um einen gezielten Bonus fuer die bisher beste gefundene Tour, die sogenannte best-so-far Loesung
+. Zu dem normalen Pheromon, das von allen Ameisen abgelegt wird, wird auf exakt den Kanten dieser historisch besten Tour ein Extrawert addiert
+. Dieser zusaetzliche Wert berechnet sich aus dem Kehrwert der bisher besten Gesamtkosten und wird mit einem zusaetzlichen Gewichtungsfaktor multipliziert, um die absolute Top-Route gezielt zu belohnen
+.
+Das Max-Min Ameisen System (MMAS) schraenkt das Update noch radikaler ein, da alle zulaessigen Pheromonwerte streng in einem vordefinierten Intervall zwischen einem Minimalwert und einem Maximalwert gehalten werden muessen
+. Zudem darf bei dieser Variante nur eine einzige Ameise das Pheromon aktualisieren, naemlich entweder diejenige mit der bisher besten Loesung ueberhaupt (best-so-far) oder diejenige mit der besten Loesung der aktuell durchgefuehrten Iteration
+. Der addierte Pheromonwert berechnet sich dann lediglich aus dem Kehrwert der Kosten dieser spezifischen Top-Tour
+. Fuer alle anderen Kanten betraegt die Pheromonzugabe exakt null
+. Dies fuehrt im Algorithmus dazu, dass wichtige Kanten extrem stark bevorzugt werden, wodurch unter Umstaenden schlechtere Kanten sehr schnell ueberhaupt nicht mehr vom System betrachtet werden
+.

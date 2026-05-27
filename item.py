@@ -5,15 +5,19 @@ class item:
         self.value = value
         self.attractiveness_yes = value / weight
         self.attractiveness_no = weight / value
-        self.pheromone_yes = 0.1
-        self.pheromone_no = 0.1
-    
-    def evaporate (self, evaporation_rate):
-        self.pheromone_yes = (1 - evaporation_rate) * self.pheromone_yes
-        self.pheromone_no = (1 - evaporation_rate) * self.pheromone_no
+        # Startwert (keine max/min Grenzen im reinen Ant-Cycle)
+        self.pheromone_yes = 1.0
+        self.pheromone_no = 1.0
         
-    def add_reward(self, decision, best_value):
-        delta_tau = best_value * 0.001
+    def evaporate(self, evaporation_rate):
+        self.pheromone_yes *= (1 - evaporation_rate)
+        self.pheromone_no *= (1 - evaporation_rate)
+        
+    def add_reward(self, decision, ant_value):
+        # Beim reinen Ant-Cycle entspricht die Belohnung proportional zur Qualität der Gesamtlösung.
+        # Im TSP ist das 1/Strecke. Beim Rucksackproblem ist es der erzielte Nutzwert (skaliert, z.B. / 100.0)
+        delta_tau = ant_value / 100.0
+        
         if decision == 1:
             self.pheromone_yes += delta_tau
         else:

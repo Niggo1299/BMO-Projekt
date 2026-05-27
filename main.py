@@ -6,11 +6,11 @@ import visualization
 
 def main():
     
-    group_size = 10         # Anzahl Ameisen pro Iteration
-    evaporation_rate = 0.5  # Verdampfung der Pheromone pro Iteration
+    group_size = 20         # Anzahl Ameisen pro Iteration
+    evaporation_rate = 0.1 # Verdampfung der Pheromone pro Iteration (MMAS Empfehlung)
     iterations = 100
-    alpha = 0.5             # Einfluss der Pheromone
-    beta = 0.5            # Einfluss der Heuristik (Wert/Gewicht)
+    alpha = 1.0             # Einfluss der Pheromone
+    beta = 1.0              # Einfluss der Heuristik (Wert/Gewicht)
     
     # Listen für das Tracking (Lernkurve)
     best_fitness_per_round = []
@@ -63,12 +63,16 @@ def main():
         best_fitness_per_round.append(round_best_ant.current_value)
         avg_fitness_per_round.append(avg_value)
         
-        # Pheromone updaten (Verdampfung + Elitär-Belohnung)
+        # Pheromone updaten (Ant-Cycle: Verdampfung + ALLE Ameisen legen Pheromone ab)
+        # 1. Verdampfung
         for current_item in items:
             current_item.evaporate(evaporation_rate)
-            # Im elitären System belohnt NUR die All-Time-Best Ameise ihren Weg!
-            decision = global_best_backpack[current_item.id]
-            current_item.add_reward(decision, global_best_value)
+            
+        # 2. Alle Ameisen auswerten und Pheromone ablegen
+        for a in ants:
+            for current_item in items:
+                decision = a.backpack[current_item.id]
+                current_item.add_reward(decision, a.current_value)
             
         # Live-Visualisierung in jedem Schritt aktualisieren
         visualization.update_live_plot(fig, ax1, ax2, items, iteration + 1, number_items, best_fitness_per_round, avg_fitness_per_round)
