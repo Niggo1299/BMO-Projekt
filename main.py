@@ -7,10 +7,10 @@ import visualization
 def main():
     
     group_size = 20         # Anzahl Ameisen pro Iteration
-    evaporation_rate = 0.1 # Verdampfung der Pheromone pro Iteration (MMAS Empfehlung)
+    evaporation_rate = 0.3 # Verdampfung der Pheromone pro Iteration (MMAS Empfehlung)
     iterations = 100
     alpha = 1.0             # Einfluss der Pheromone
-    beta = 1.0              # Einfluss der Heuristik (Wert/Gewicht)
+    beta = 2.0              # Einfluss der Heuristik (Wert/Gewicht)
     
     # Listen für das Tracking (Lernkurve)
     best_fitness_per_round = []
