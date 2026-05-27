@@ -1,13 +1,13 @@
 import random
+import json
 from ant import ant
 from item import item
 import visualization
 
 def main():
-    number_items = 50
+    
     group_size = 10
-    max_load = 20
-    evaporation_rate = 0.1
+    evaporation_rate = 0.9
     iterations = 100
     alpha = 0.5
     beta = 0.5
@@ -21,17 +21,21 @@ def main():
     global_best_backpack = []
     global_best_weight = 0
 
-    # create items
+    # Problem laden
+    with open("problem.json", "r") as f:
+        problem_data = json.load(f)
+        
+    number_items = problem_data["number_items"]
+    max_load = problem_data["max_load"]
+    
     items = []
-    for i in range(number_items):
-        weight = random.randint(1, 10)
-        value = random.randint(1, 10)
-        items.append(item(i, weight, value))
+    for data in problem_data["items"]:
+        items.append(item(data["id"], data["weight"], data["value"]))
         
     # create ants
     ants = []
     for i in range(group_size):
-        ants.append(ant(max_load))
+        ants.append(ant(max_load, number_items))
         
     # Setup Live-Plot
     fig, ax1, ax2 = visualization.setup_live_plot()
@@ -39,8 +43,10 @@ def main():
     # main loop
     for iteration in range(iterations):
         for a in ants:
+            starting_position = random.randint(0, number_items - 1)
             a.reset()
-            for current_item in items:
+            for position in range(number_items):
+                current_item = items[(starting_position + position) % number_items]
                 a.decision(current_item, alpha, beta)
                 
         # Finde beste Ameise DIESER Runde

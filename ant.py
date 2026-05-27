@@ -1,14 +1,15 @@
 import random
 
 class ant:
-    def __init__(self, max_load):
+    def __init__(self, max_load, num_items):
         self.max_weight = max_load
-        self.backpack = []
+        self.num_items = num_items
+        self.backpack = [0] * num_items
         self.current_load = 0
         self.current_value = 0
     
     def reset(self):
-        self.backpack = []
+        self.backpack = [0] * self.num_items
         self.current_load = 0
         self.current_value = 0
     
@@ -19,7 +20,7 @@ class ant:
     
     def decision (self, item, alpha, beta):
         if self.pre_check(item):
-            self.backpack.append(0)
+            self.backpack[item.id] = 0
             return False
         
         # Schritt 1: Berechnung der gewichteten Übergangswerte (Zähler)
@@ -32,7 +33,7 @@ class ant:
         total_a = a_yes + a_no
         
         if total_a == 0:
-            self.backpack.append(0)
+            self.backpack[item.id] = 0
             return False
         
         # Schritt 2: Berechnung der exakten Wahrscheinlichkeit für JA (p_ja)
@@ -41,10 +42,10 @@ class ant:
         rand_value = random.random()
         
         if rand_value < prob_yes:
-            self.backpack.append(1)
+            self.backpack[item.id] = 1
             self.current_load += item.weight
             self.current_value += item.value
             return True
         else:
-            self.backpack.append(0)
+            self.backpack[item.id] = 0
             return False

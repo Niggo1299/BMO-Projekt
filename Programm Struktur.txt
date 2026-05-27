@@ -15,7 +15,8 @@ PROJEKT-KONTEXT:
 1. DAS GRUNDPRINZIP DER CODIERUNG & ENTSCHEIDUNGSLOGIK
 ================================================================================
 Anstatt Wege zwischen Städten zu suchen, laufen die Ameisen sequenziell eine 
-starre Liste von Gegenständen (Items 1 bis N) ab. 
+starre Liste von Gegenständen in Kreis ab (Items 1 bis N). Die Startposition wird dabei 
+in jeder Iteration neu zufällig gewählt.
 
 An jedem Gegenstand steht die Ameise vor einer binären Entscheidung (Kreuzung):
 - Weg 1 (JA): Der Gegenstand wird in den Rucksack gepackt.
