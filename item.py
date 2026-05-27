@@ -13,10 +13,10 @@ class item:
         self.pheromone_yes *= (1 - evaporation_rate)
         self.pheromone_no *= (1 - evaporation_rate)
         
-    def add_reward(self, decision, ant_value):
-        # Beim reinen Ant-Cycle entspricht die Belohnung proportional zur Qualität der Gesamtlösung.
-        # Im TSP ist das 1/Strecke. Beim Rucksackproblem ist es der erzielte Nutzwert (skaliert, z.B. / 100.0)
-        delta_tau = ant_value / 100.0
+    def add_reward(self, decision, ant_value, weight=1.0):
+        # Beim EAS kann ein zusätzliches Gewicht (weight) für Elitaere Ameisen übergeben werden.
+        # proportional zur Qualität der Gesamtlösung (Nutzen skaliert mal Gewichtungsfaktor).
+        delta_tau = (ant_value / 100.0) * weight
         
         if decision == 1:
             self.pheromone_yes += delta_tau
