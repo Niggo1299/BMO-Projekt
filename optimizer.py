@@ -40,7 +40,7 @@ def run_experiments():
 
     # ===================== AUSFÜHRUNGSPARAMETER =====================
     num_runs_per_config = 5             # Wiederholungen pro Parameterkombination
-    iterations = 100                     # Iterationen pro Einzellauf
+    iterations = 50                     # Iterationen pro Einzellauf
     log_file = "optimization_results.csv"
 
     print(f"=== Parameter-Optimierung ===")

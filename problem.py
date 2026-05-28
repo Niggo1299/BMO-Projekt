@@ -9,7 +9,7 @@ import random
 import json
 
 
-def generate_problem(number_items=50, max_load=20, filename="problem.json"):
+def generate_problem(number_items=100, max_load=25, filename="problem.json"):
     """
     Erzeugt ein Rucksackproblem mit zufälligen Items.
 

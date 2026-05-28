@@ -72,7 +72,7 @@ def compute_grouped_statistics(df):
     return grouped
 
 
-def compute_score(df, weight_quality=0.5, weight_speed=0.5):
+def compute_score(df, weight_quality=0.7, weight_speed=0.3):
     """
     Berechnet einen kombinierten Score für jede Konfiguration.
 
