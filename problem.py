@@ -1,22 +1,41 @@
+"""
+Generiert ein zufälliges 0/1-Rucksackproblem und speichert es als JSON.
+
+Aufruf:
+    python problem.py
+"""
+
 import random
 import json
 
-number_items = 50
-max_load = 20
 
-# create items
-items_data = []
-for i in range(number_items):
-    weight = random.randint(1, 10)
-    value = random.randint(1, 10)
-    items_data.append({"id": i, "weight": weight, "value": value})
+def generate_problem(number_items=50, max_load=20, filename="problem.json"):
+    """
+    Erzeugt ein Rucksackproblem mit zufälligen Items.
 
-# Speichere die generierten Daten in eine JSON-Datei
-with open("problem.json", "w") as f:
-    json.dump({
+    Args:
+        number_items: Anzahl der verfügbaren Gegenstände.
+        max_load:     Maximale Tragfähigkeit des Rucksacks.
+        filename:     Dateiname für die JSON-Ausgabe.
+    """
+    items_data = []
+    for i in range(number_items):
+        weight = random.randint(1, 10)
+        value = random.randint(1, 10)
+        items_data.append({"id": i, "weight": weight, "value": value})
+
+    problem = {
         "number_items": number_items,
         "max_load": max_load,
         "items": items_data
-    }, f, indent=4)
+    }
 
-print("Problem erfolgreich unter 'problem.json' gespeichert!")
+    with open(filename, "w") as f:
+        json.dump(problem, f, indent=4)
+
+    print(f"Problem erfolgreich unter '{filename}' gespeichert!")
+    print(f"  → {number_items} Items, max. Gewicht: {max_load}")
+
+
+if __name__ == "__main__":
+    generate_problem()

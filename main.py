@@ -1,90 +1,144 @@
+"""
+Hauptprogramm: Ameisenalgorithmus für das 0/1-Rucksackproblem.
+
+Unterstützte Varianten:
+- Ant-Cycle (AC):    Folie 7 – alle Ameisen legen Pheromone ab
+- Elitäres AS (EAS): Folie 9 – zusätzlicher Elite-Bonus (best-so-far)
+
+Aufruf:
+    python main.py          → Standard: EAS
+    python main.py AC       → Ant-Cycle
+    python main.py EAS      → Elitäres Ameisen-System
+"""
+
+import sys
 import random
 import json
-from ant import ant
-from item import item
+from ant import Ant
+from item import Item
 import visualization
 
+
 def main():
-    
-    group_size = 20         # Anzahl Ameisen pro Iteration
-    evaporation_rate = 0.1 # Verdampfung der Pheromone pro Iteration (MMAS Empfehlung)
-    iterations = 100
-    alpha = 1.0             # Einfluss der Pheromone
-    beta = 1.0              # Einfluss der Heuristik (Wert/Gewicht)
-    
-    # Listen für das Tracking (Lernkurve)
-    best_fitness_per_round = []
-    avg_fitness_per_round = []
-    
-    # All-Time-Best Variablen
+    # ===================== VARIANTENAUSWAHL =====================
+    # Modus per Kommandozeile oder Standard
+    if len(sys.argv) > 1 and sys.argv[1].upper() in ("AC", "EAS"):
+        mode = sys.argv[1].upper()
+    else:
+        mode = "EAS"
+
+    # ===================== PARAMETER =====================
+    group_size = 20             # Anzahl Ameisen pro Iteration (m)
+    evaporation_rate = 0.3      # Verdunstungsfaktor ρ (0 ≤ ρ ≤ 1)
+    iterations = 100            # Anzahl der Iterationsschritte
+    alpha = 1.0                 # Gewichtung der Pheromonspuren (τ^α)
+    beta = 2.0                  # Gewichtung der heuristischen Information (η^β)
+    elite_weight = 0.8          # Gewichtungsfaktor e für EAS (Folie 9: 0 ≤ e ≤ 1)
+
+    # ===================== TRACKING =====================
+    best_fitness_per_round = []     # Bester Fitness-Wert pro Iteration
+    avg_fitness_per_round = []      # Durchschnittlicher Fitness-Wert pro Iteration
+
+    # All-Time-Best (best-so-far) Variablen
     global_best_value = -1
     global_best_backpack = []
     global_best_weight = 0
 
-    # Problem laden
+    # ===================== PROBLEM LADEN =====================
     with open("problem.json", "r") as f:
         problem_data = json.load(f)
-        
+
     number_items = problem_data["number_items"]
     max_load = problem_data["max_load"]
-    
+
+    # Item-Objekte erzeugen
     items = []
     for data in problem_data["items"]:
-        items.append(item(data["id"], data["weight"], data["value"]))
-        
-    # create ants
-    ants = []
-    for i in range(group_size):
-        ants.append(ant(max_load, number_items))
-        
-    # Setup Live-Plot
+        items.append(Item(data["id"], data["weight"], data["value"]))
+
+    # Maximaler theoretischer Wert (zur Normierung der Pheromonablage)
+    max_possible_value = sum(item.value for item in items)
+
+    # ===================== AMEISEN ERZEUGEN =====================
+    ants = [Ant(max_load, number_items) for _ in range(group_size)]
+
+    # ===================== VISUALISIERUNG SETUP =====================
     fig, ax1, ax2 = visualization.setup_live_plot()
-        
-    # main loop
+
+    # ===================== INFO-AUSGABE =====================
+    print(f"=== Modus: {mode} ===")
+    if mode == "EAS":
+        print(f"    Elite-Gewicht e = {elite_weight}")
+    print(f"    {group_size} Ameisen, {iterations} Iterationen")
+    print(f"    α={alpha}, β={beta}, ρ={evaporation_rate}")
+    print()
+
+    # ===================== HAUPTSCHLEIFE (Ant-Cycle) =====================
     for iteration in range(iterations):
+
+        # --- Phase 1: Lösungskonstruktion durch alle Ameisen ---
         for a in ants:
+            # Zufällige Startposition (jede Ameise beginnt bei einem anderen Item)
             starting_position = random.randint(0, number_items - 1)
             a.reset()
+
+            # Jede Ameise besucht alle Items genau einmal (zyklische Reihenfolge)
             for position in range(number_items):
                 current_item = items[(starting_position + position) % number_items]
                 a.decision(current_item, alpha, beta)
-                
-        # Finde beste Ameise DIESER Runde
+
+        # --- Phase 2: Auswertung ---
+        # Beste Ameise dieser Iteration (iteration-best)
         round_best_ant = max(ants, key=lambda x: x.current_value)
-        
-        # All-Time-Best aktualisieren
+
+        # All-Time-Best (best-so-far) aktualisieren
         if round_best_ant.current_value > global_best_value:
             global_best_value = round_best_ant.current_value
             global_best_backpack = list(round_best_ant.backpack)
             global_best_weight = round_best_ant.current_load
-            
-        # Daten für Lernkurve speichern
+
+        # Lernkurven-Daten speichern
         avg_value = sum(a.current_value for a in ants) / group_size
         best_fitness_per_round.append(round_best_ant.current_value)
         avg_fitness_per_round.append(avg_value)
-        
-        # Pheromone updaten (Ant-Cycle: Verdampfung + ALLE Ameisen legen Pheromone ab)
-        # 1. Verdampfung
+
+        # --- Phase 3: Pheromonupdate ---
+        # AC:  τij,t+1 = (1-ρ)·τij,t + Σ Δk_ij,t
+        # EAS: τij,t+1 = (1-ρ)·τij,t + Σ Δk_ij,t + e · Δbs_ij,t
+
+        # Schritt 3a: Verdampfung → (1-ρ)·τij,t
         for current_item in items:
             current_item.evaporate(evaporation_rate)
-            
-        # 2. Alle Ameisen auswerten und Pheromone ablegen
+
+        # Schritt 3b: Pheromonablage ALLER Ameisen → Σ Δk_ij,t
         for a in ants:
             for current_item in items:
                 decision = a.backpack[current_item.id]
-                current_item.add_reward(decision, a.current_value)
-            
-        # Live-Visualisierung in jedem Schritt aktualisieren
-        visualization.update_live_plot(fig, ax1, ax2, items, iteration + 1, number_items, best_fitness_per_round, avg_fitness_per_round)
+                current_item.add_reward(decision, a.current_value, max_possible_value)
 
-    # Auswertung
-    print("=== OPTIMIERUNG ABGESCHLOSSEN ===")
+        # Schritt 3c: Elitärer Bonus – NUR bei EAS (Folie 9)
+        if mode == "EAS" and global_best_value > 0:
+            for current_item in items:
+                decision = global_best_backpack[current_item.id]
+                current_item.add_reward(
+                    decision, global_best_value, max_possible_value,
+                    elite_factor=elite_weight
+                )
+
+        # --- Visualisierung aktualisieren ---
+        visualization.update_live_plot(
+            fig, ax1, ax2, items, iteration + 1,
+            number_items, best_fitness_per_round, avg_fitness_per_round, mode
+        )
+
+    # ===================== ERGEBNIS =====================
+    print(f"=== OPTIMIERUNG ABGESCHLOSSEN ({mode}) ===")
     print(f"Bester Rucksack-Wert: {global_best_value}")
     print(f"Benutztes Gewicht:    {global_best_weight} / {max_load}")
     print(f"Rucksack-Belegung:    {global_best_backpack}")
-    
-    # Am Ende das Fenster offen lassen
+
     visualization.show_final()
+
 
 if __name__ == "__main__":
     main()
