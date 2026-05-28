@@ -33,7 +33,7 @@ def run_experiments():
     # ===================== PARAMETER-GRID =====================
     # Definierte Stufen für jeden Faktor (statistische Versuchsplanung)
     alphas = [1.0, 1.5, 2.0]
-    betas = [1.0, 1.5, 2.0]
+    betas = [1.0, 2.5, 4.0]
     evaporations = [0.1, 0.3, 0.5]
     group_sizes = [10, 20, 30]
     elite_weights = [0.2, 0.5, 1.0]    # Nur relevant für EAS

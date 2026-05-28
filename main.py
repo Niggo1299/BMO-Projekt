@@ -119,7 +119,7 @@ def main():
     if mode == "EAS":
         print(f"    Elite-Gewicht e = {elite_weight}")
     print(f"    {group_size} Ameisen, {iterations} Iterationen")
-    print(f"    α={alpha}, β={beta}, ρ={evaporation_rate}")
+    print(f"    alpha={alpha}, beta={beta}, rho={evaporation_rate}")
     print()
 
     # ===================== HAUPTSCHLEIFE =====================
