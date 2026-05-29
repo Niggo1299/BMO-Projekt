@@ -246,7 +246,7 @@ def plot_response_surface(model, X, feature_names, optimal_params, mode):
     plt.suptitle(f'Response Surface – 1D-Schnitte ({mode})', fontsize=13)
     plt.tight_layout()
 
-    output_file = f"response_surface_{mode}.png"
+    output_file = f"data/response_surface_{mode}.png"
     plt.savefig(output_file, dpi=150, bbox_inches='tight')
     print(f"Plot gespeichert: {output_file}")
     plt.show()
@@ -255,7 +255,7 @@ def plot_response_surface(model, X, feature_names, optimal_params, mode):
 def main():
     parser = argparse.ArgumentParser(
         description="Response Surface Optimierung")
-    parser.add_argument("--file", type=str, default="evaluation_results.csv",
+    parser.add_argument("--file", type=str, default="data/evaluation_results.csv",
                         help="Pfad zur bewerteten Ergebnis-CSV")
     parser.add_argument("--mode", type=str, default="EAS",
                         help="Modus: AC oder EAS")

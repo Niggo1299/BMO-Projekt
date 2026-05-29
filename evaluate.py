@@ -5,11 +5,11 @@ Liest die CSV-Datei des Optimizers ein, gruppiert nach Parameterkonfiguration,
 berechnet den Median und ermittelt die optimale Einstellung.
 
 Datenfluss:
-    optimizer.py → optimization_results.csv → evaluate.py → evaluation_results.csv
+    experiment.py → data/experiment_results.csv → evaluate.py → data/evaluation_results.csv
 
 Aufruf:
     python evaluate.py
-    python evaluate.py --file andere_datei.csv --top 10
+    python evaluate.py --file data/andere_datei.csv --top 10
     python evaluate.py --weight-quality 1.0 --weight-speed 0.0
 """
 
@@ -198,7 +198,7 @@ def export_results(df, filepath="evaluation_results.csv"):
 def main():
     parser = argparse.ArgumentParser(
         description="Auswertung der Optimierungsergebnisse")
-    parser.add_argument("--file", type=str, default="optimization_results.csv",
+    parser.add_argument("--file", type=str, default="data/experiment_results.csv",
                         help="Pfad zur Ergebnis-CSV")
     parser.add_argument("--top", type=int, default=5,
                         help="Anzahl Top-Konfigurationen pro Modus")
@@ -206,7 +206,7 @@ def main():
                         help="Gewichtung Qualität im Score (Standard: 0.7)")
     parser.add_argument("--weight-speed", type=float, default=0.3,
                         help="Gewichtung Geschwindigkeit im Score (Standard: 0.3)")
-    parser.add_argument("--output", type=str, default="evaluation_results.csv",
+    parser.add_argument("--output", type=str, default="data/evaluation_results.csv",
                         help="Pfad zur Ausgabe-CSV")
 
     args = parser.parse_args()

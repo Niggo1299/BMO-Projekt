@@ -27,7 +27,7 @@ DIFFICULTY_CONFIGS = {
         "s": 50,
         "b": 2,
         "seed": 1,
-        "filename": "problem.json",
+        "filename": "data/problem.json",
     },
     "medium": {
         "n": 200,
@@ -38,7 +38,7 @@ DIFFICULTY_CONFIGS = {
         "s": 50,
         "b": 2,
         "seed": 2,
-        "filename": "problem.json",
+        "filename": "data/problem.json",
     },
     "hard": {
         "n": 400,
@@ -49,7 +49,7 @@ DIFFICULTY_CONFIGS = {
         "s": 80,
         "b": 2,
         "seed": 3,
-        "filename": "problem.json",
+        "filename": "data/problem.json",
     },
 }
 

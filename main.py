@@ -27,16 +27,16 @@ import visualization
 def main():
     # ===================== STANDARDEINSTELLUNGEN =====================
     DEF_MODE = "AC"
-    DEF_GROUP_SIZE = 20
-    DEF_EVAPORATION = 0.1
+    DEF_GROUP_SIZE = 50
+    DEF_EVAPORATION = 0.65
     DEF_ITERATIONS = 100
-    DEF_ALPHA = 1.0
-    DEF_BETA = 2.0
+    DEF_ALPHA = 0.64
+    DEF_BETA = 5.0
     DEF_ELITE_WEIGHT = 1.0
-    DEF_STAGNATION_LIMIT = 20
+    DEF_STAGNATION_LIMIT = 50
     DEF_VISUALIZATION = True
-    DEF_LOGGING = True
-    DEF_LOG_FILE = "results.csv"
+    DEF_LOGGING = False
+    DEF_LOG_FILE = "data/results.csv"
 
     # ===================== KOMMANDOZEILEN-PARSER =====================
     parser = argparse.ArgumentParser(description="Ameisenalgorithmus (AC/EAS)")
@@ -90,7 +90,7 @@ def main():
     stagnation_counter = 0
 
     # ===================== PROBLEM LADEN =====================
-    with open("problem.json", "r") as f:
+    with open("data/problem.json", "r") as f:
         problem_data = json.load(f)
 
     number_items = problem_data["number_items"]
