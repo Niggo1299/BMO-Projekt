@@ -34,8 +34,8 @@ def main():
     DEF_BETA = 5.0
     DEF_ELITE_WEIGHT = 1.0
     DEF_STAGNATION_LIMIT = 50
-    DEF_VISUALIZATION = True
-    DEF_LOGGING = False
+    DEF_VISUALIZATION = False
+    DEF_LOGGING = True
     DEF_LOG_FILE = "data/results.csv"
 
     # ===================== KOMMANDOZEILEN-PARSER =====================

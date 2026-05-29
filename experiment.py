@@ -24,8 +24,8 @@ def run_experiments():
     """
 
     # ===================== AUSWAHL =====================
-    AC = True
-    EAS = False
+    AC = False
+    EAS = True
 
     # ===================== PARAMETER-GRID =====================
     alphas = [0.5, 1.0, 1.5, 2.0]
