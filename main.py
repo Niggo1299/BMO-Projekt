@@ -32,14 +32,14 @@ def main():
     # WICHTIG: Alle DEF_-Variablen MÜSSEN vor dem Parser definiert sein,
     #          da sie als default-Werte in add_argument() referenziert werden.
     DEF_MODE = "AC"                 # Variante: "AC" oder "EAS"
-    DEF_GROUP_SIZE = 30             # Anzahl Ameisen pro Iteration (m)
-    DEF_EVAPORATION = 0.5           # Verdunstungsfaktor ρ (0 ≤ ρ ≤ 1)
+    DEF_GROUP_SIZE = 20             # Anzahl Ameisen pro Iteration (m)
+    DEF_EVAPORATION = 0.1           # Verdunstungsfaktor ρ (0 ≤ ρ ≤ 1)
     DEF_ITERATIONS = 100            # Anzahl der Iterationsschritte
-    DEF_ALPHA = 2.0                 # Gewichtung der Pheromonspuren (τ^α)
-    DEF_BETA = 1.0                  # Gewichtung der heuristischen Information (η^β)
+    DEF_ALPHA = 1.0                 # Gewichtung der Pheromonspuren (τ^α)
+    DEF_BETA = 2.0                  # Gewichtung der heuristischen Information (η^β)
     DEF_ELITE_WEIGHT = 1.0          # Gewichtungsfaktor e für EAS (Folie 9: 0 ≤ e ≤ 1)
     DEF_VISUALIZATION = True       # Live-Plot an/aus
-    DEF_LOGGING = False              # CSV-Protokollierung an/aus
+    DEF_LOGGING = True              # CSV-Protokollierung an/aus
     DEF_LOG_FILE = "results.csv"    # Name der Log-Datei
 
     # ===================== KOMMANDOZEILEN-PARSER =====================
