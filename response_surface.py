@@ -1,19 +1,12 @@
 """
 Response Surface Methode (RSM) zur Bestimmung optimaler Parameter.
 
-Liest die median-gefilterten Scores aus evaluate.py und fittet eine
-polynomiale Regressionsfläche. Anschließend wird das Maximum dieser
-Fläche gesucht → optimale Parametrisierung.
-
 Schritte:
 1. evaluation_results.csv laden (bereits median-gefiltert + Score)
 2. Polynomiales Regressionsmodell fitten (Response Surface)
 3. Maximum der Fläche suchen (scipy.optimize.differential_evolution)
 4. Sensitivitätsanalyse: Welcher Parameter hat den größten Einfluss?
 5. Visualisierung der Response Surface (1D-Schnitte)
-
-Datenfluss:
-    evaluate.py → evaluation_results.csv → response_surface.py → Optimale Parameter
 
 Aufruf:
     python response_surface.py
@@ -36,16 +29,13 @@ def load_scored_data(filepath, mode):
     """
     Lädt die bewerteten Ergebnisse und filtert nach Modus.
 
-    Die Daten enthalten bereits den Median über mehrere Runs
-    (berechnet in evaluate.py), sind also robust gegen Ausreißer.
-
     Args:
         filepath: Pfad zur CSV-Datei (aus evaluate.py).
         mode:     "AC" oder "EAS".
 
     Returns:
         X:             Feature-Matrix (Parameter als Spalten).
-        y:             Zielvariable (Score, basierend auf Median).
+        y:             Zielvariable (Score).
         feature_names: Liste der Parameternamen.
         df:            Gefiltertes DataFrame.
     """
@@ -55,9 +45,9 @@ def load_scored_data(filepath, mode):
     if df.empty:
         raise ValueError(f"Keine Daten für Modus '{mode}' gefunden.")
 
-    # Features je nach Modus (EAS hat zusätzlich elite_weight)
     if mode == "EAS":
-        feature_names = ["alpha", "beta", "evaporation", "group_size", "elite_weight"]
+        feature_names = ["alpha", "beta", "evaporation", "group_size",
+                         "elite_weight"]
     else:
         feature_names = ["alpha", "beta", "evaporation", "group_size"]
 
@@ -67,7 +57,7 @@ def load_scored_data(filepath, mode):
     print(f"Daten geladen: {len(df)} Konfigurationen für {mode}")
     print(f"  Features:     {feature_names}")
     print(f"  Score-Bereich: [{y.min():.3f}, {y.max():.3f}]")
-    print(f"  (Scores basieren bereits auf Median über mehrere Runs)\n")
+    print()
 
     return X, y, feature_names, df
 
@@ -81,19 +71,14 @@ def fit_response_surface(X, y, degree=2):
         2. PolynomialFeatures: Erzeugt quadratische Terme + Interaktionen
         3. Ridge Regression: Lineares Modell mit L2-Regularisierung
 
-    Polynomgrad 2 erfasst:
-        - Lineare Effekte (z.B. "mehr β = besser")
-        - Quadratische Effekte (z.B. "β hat ein Optimum bei 3.2")
-        - Interaktionen (z.B. "hoher α braucht niedrigen ρ")
-
     Args:
         X:      Feature-Matrix.
         y:      Zielvariable (Score).
-        degree: Grad des Polynoms (Standard: 2 = quadratisch).
+        degree: Grad des Polynoms (Standard: 2).
 
     Returns:
         model: Gefittete sklearn Pipeline.
-        r2:    Bestimmtheitsmaß R² (Güte des Fits).
+        r2:    Bestimmtheitsmaß R².
     """
     model = Pipeline([
         ("scaler", StandardScaler()),
@@ -109,10 +94,9 @@ def fit_response_surface(X, y, degree=2):
     print(f"  → R² = {r2:.4f} (1.0 = perfekt, >0.8 = gut)")
 
     if r2 < 0.5:
-        print("  ⚠️  Warnung: R² niedrig – Modell passt schlecht auf die Daten.")
-        print("     Mögliche Ursachen: zu wenig Daten, hohe Stochastik, falscher Grad.")
+        print("  ⚠️  Warnung: R² niedrig – Modell passt schlecht.")
     elif r2 < 0.8:
-        print("  ℹ️  Hinweis: R² mäßig – Ergebnisse mit Vorsicht interpretieren.")
+        print("  ℹ️  Hinweis: R² mäßig – mit Vorsicht interpretieren.")
     print()
 
     return model, r2
@@ -121,13 +105,6 @@ def fit_response_surface(X, y, degree=2):
 def find_optimum(model, feature_names, mode):
     """
     Sucht das Maximum der Response Surface mittels Differential Evolution.
-
-    Differential Evolution ist ein globaler Optimierer, der nicht in
-    lokalen Maxima stecken bleibt. Er sucht den Parametersatz, der den
-    höchsten vorhergesagten Score liefert.
-
-    Parametergrenzen gehen leicht über das getestete Grid hinaus,
-    um mögliche Optima zwischen/außerhalb der Gitterpunkte zu finden.
 
     Args:
         model:         Gefittete Pipeline.
@@ -138,7 +115,6 @@ def find_optimum(model, feature_names, mode):
         optimal_params: Dictionary mit optimalen Parameterwerten.
         optimal_score:  Vorhergesagter Score am Optimum.
     """
-    # Suchgrenzen (etwas breiter als das getestete Grid)
     bounds_dict = {
         "alpha":        (0.5, 3.0),
         "beta":         (0.5, 5.0),
@@ -149,12 +125,10 @@ def find_optimum(model, feature_names, mode):
 
     bounds = [bounds_dict[name] for name in feature_names]
 
-    # scipy minimiert → wir minimieren den negativen Score
     def objective(params):
         X_input = np.array(params).reshape(1, -1)
         return -model.predict(X_input)[0]
 
-    # Globale Optimierung (robust gegen lokale Maxima)
     result = differential_evolution(
         objective,
         bounds=bounds,
@@ -184,10 +158,6 @@ def sensitivity_analysis(model, X, feature_names):
     Bestimmt den relativen Einfluss jedes Parameters auf den Score.
 
     Methode: Varianzbasierte Sensitivität.
-    Für jeden Parameter wird sein Wert auf den Mittelwert fixiert
-    und die resultierende Varianzreduktion der Vorhersage gemessen.
-
-    Hohe Varianzreduktion = Parameter hat großen Einfluss auf das Ergebnis.
 
     Args:
         model:         Gefittete Pipeline.
@@ -203,23 +173,20 @@ def sensitivity_analysis(model, X, feature_names):
     importance = {}
 
     for i, name in enumerate(feature_names):
-        # Parameter i auf seinen Mittelwert fixieren (eliminiert seinen Einfluss)
         X_modified = X.copy()
         X_modified[:, i] = np.mean(X[:, i])
 
         modified_pred = model.predict(X_modified)
         reduced_variance = np.var(modified_pred)
 
-        # Varianzreduktion = Anteil dieses Parameters an der Gesamtvarianz
         importance[name] = (base_variance - reduced_variance) / base_variance
 
-    # Normieren auf Summe = 1 (relative Anteile)
     total = sum(abs(v) for v in importance.values())
     if total > 0:
         importance = {k: abs(v) / total for k, v in importance.items()}
 
-    # Sortieren nach Einfluss (absteigend)
-    importance = dict(sorted(importance.items(), key=lambda x: x[1], reverse=True))
+    importance = dict(sorted(importance.items(), key=lambda x: x[1],
+                             reverse=True))
 
     print("=== SENSITIVITÄTSANALYSE ===")
     print("    Relativer Einfluss jedes Parameters auf den Score:\n")
@@ -235,18 +202,12 @@ def plot_response_surface(model, X, feature_names, optimal_params, mode):
     """
     Visualisiert 1D-Schnitte der Response Surface.
 
-    Für jeden Parameter wird ein Plot erstellt:
-    - X-Achse: Parameterwert (variiert über seinen Bereich)
-    - Y-Achse: Vorhergesagter Score
-    - Alle anderen Parameter sind auf ihrem Optimum fixiert.
-    - Rote Linie markiert das gefundene Optimum.
-
     Args:
         model:          Gefittete Pipeline.
         X:              Feature-Matrix (für Wertebereiche).
         feature_names:  Liste der Parameternamen.
-        optimal_params: Optimale Parameterwerte (aus find_optimum).
-        mode:           "AC" oder "EAS" (für Titel/Dateinamen).
+        optimal_params: Optimale Parameterwerte.
+        mode:           "AC" oder "EAS".
     """
     n_features = len(feature_names)
     n_plots = min(n_features, 5)
@@ -259,26 +220,22 @@ def plot_response_surface(model, X, feature_names, optimal_params, mode):
         ax = axes[i]
         name = feature_names[i]
 
-        # Wertebereich für diesen Parameter
         param_min = X[:, i].min()
         param_max = X[:, i].max()
-        # Etwas über das Grid hinaus erweitern
         margin = (param_max - param_min) * 0.1
         param_range = np.linspace(param_min - margin, param_max + margin, 200)
 
-        # Alle anderen Parameter auf Optimum fixieren
         X_plot = np.tile(
             [optimal_params[n] for n in feature_names],
             (200, 1)
         )
         X_plot[:, i] = param_range
 
-        # Vorhersage der Response Surface
         y_pred = model.predict(X_plot)
 
-        # Plot
         ax.plot(param_range, y_pred, 'b-', linewidth=2)
-        ax.axvline(optimal_params[name], color='red', linestyle='--', linewidth=1.5,
+        ax.axvline(optimal_params[name], color='red', linestyle='--',
+                   linewidth=1.5,
                    label=f'Optimum: {optimal_params[name]:.2f}')
         ax.set_xlabel(name, fontsize=10)
         ax.set_ylabel('Score', fontsize=10)
@@ -289,7 +246,6 @@ def plot_response_surface(model, X, feature_names, optimal_params, mode):
     plt.suptitle(f'Response Surface – 1D-Schnitte ({mode})', fontsize=13)
     plt.tight_layout()
 
-    # Plot speichern und anzeigen
     output_file = f"response_surface_{mode}.png"
     plt.savefig(output_file, dpi=150, bbox_inches='tight')
     print(f"Plot gespeichert: {output_file}")
@@ -297,14 +253,14 @@ def plot_response_surface(model, X, feature_names, optimal_params, mode):
 
 
 def main():
-    # ===================== PARAMETER =====================
-    parser = argparse.ArgumentParser(description="Response Surface Optimierung")
+    parser = argparse.ArgumentParser(
+        description="Response Surface Optimierung")
     parser.add_argument("--file", type=str, default="evaluation_results.csv",
-                        help="Pfad zur bewerteten Ergebnis-CSV (aus evaluate.py)")
+                        help="Pfad zur bewerteten Ergebnis-CSV")
     parser.add_argument("--mode", type=str, default="EAS",
                         help="Modus: AC oder EAS")
     parser.add_argument("--degree", type=int, default=2,
-                        help="Polynomgrad der Response Surface (Standard: 2)")
+                        help="Polynomgrad der Response Surface")
     parser.add_argument("--no-plot", action="store_true",
                         help="Visualisierung deaktivieren")
 
@@ -315,24 +271,14 @@ def main():
     print(f" Response Surface Methode – {mode}")
     print(f"{'='*60}\n")
 
-    # ===================== SCHRITT 1: DATEN LADEN =====================
-    # Daten sind bereits median-gefiltert (aus evaluate.py)
     X, y, feature_names, df = load_scored_data(args.file, mode)
-
-    # ===================== SCHRITT 2: MODELL FITTEN =====================
     model, r2 = fit_response_surface(X, y, degree=args.degree)
-
-    # ===================== SCHRITT 3: OPTIMUM SUCHEN =====================
     optimal_params, optimal_score = find_optimum(model, feature_names, mode)
-
-    # ===================== SCHRITT 4: SENSITIVITÄT =====================
     importance = sensitivity_analysis(model, X, feature_names)
 
-    # ===================== SCHRITT 5: VISUALISIERUNG =====================
     if not args.no_plot:
         plot_response_surface(model, X, feature_names, optimal_params, mode)
 
-    # ===================== ZUSAMMENFASSUNG =====================
     print(f"{'='*60}")
     print(f" ZUSAMMENFASSUNG ({mode})")
     print(f"{'='*60}")

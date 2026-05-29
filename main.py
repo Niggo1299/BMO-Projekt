@@ -14,7 +14,6 @@ Parameter-Überschreibung via Kommandozeile (z.B. für Optimizer):
     python main.py EAS --alpha 2.0 --beta 1.5 --no-vis --log-file results.csv
 """
 
-import sys
 import os
 import csv
 import random
@@ -27,23 +26,19 @@ import visualization
 
 def main():
     # ===================== STANDARDEINSTELLUNGEN =====================
-    # Diese Werte werden genutzt, wenn main.py ohne Argumente gestartet wird.
-    # Der Optimizer überschreibt sie per Kommandozeile.
-    # WICHTIG: Alle DEF_-Variablen MÜSSEN vor dem Parser definiert sein,
-    #          da sie als default-Werte in add_argument() referenziert werden.
-    DEF_MODE = "AC"                 # Variante: "AC" oder "EAS"
-    DEF_GROUP_SIZE = 20             # Anzahl Ameisen pro Iteration (m)
-    DEF_EVAPORATION = 0.1           # Verdunstungsfaktor ρ (0 ≤ ρ ≤ 1)
-    DEF_ITERATIONS = 100            # Anzahl der Iterationsschritte
-    DEF_ALPHA = 1.0                 # Gewichtung der Pheromonspuren (τ^α)
-    DEF_BETA = 2.0                  # Gewichtung der heuristischen Information (η^β)
-    DEF_ELITE_WEIGHT = 1.0          # Gewichtungsfaktor e für EAS (Folie 9: 0 ≤ e ≤ 1)
-    DEF_VISUALIZATION = True       # Live-Plot an/aus
-    DEF_LOGGING = True              # CSV-Protokollierung an/aus
-    DEF_LOG_FILE = "results.csv"    # Name der Log-Datei
+    DEF_MODE = "AC"
+    DEF_GROUP_SIZE = 20
+    DEF_EVAPORATION = 0.1
+    DEF_ITERATIONS = 100
+    DEF_ALPHA = 1.0
+    DEF_BETA = 2.0
+    DEF_ELITE_WEIGHT = 1.0
+    DEF_STAGNATION_LIMIT = 20
+    DEF_VISUALIZATION = True
+    DEF_LOGGING = True
+    DEF_LOG_FILE = "results.csv"
 
     # ===================== KOMMANDOZEILEN-PARSER =====================
-    # Ermöglicht das Überschreiben aller Parameter durch externe Aufrufe
     parser = argparse.ArgumentParser(description="Ameisenalgorithmus (AC/EAS)")
     parser.add_argument("mode", nargs="?", default=DEF_MODE,
                         help="Variante: AC oder EAS (Standard: AC)")
@@ -59,6 +54,8 @@ def main():
                         help="Heuristik-Gewichtung β")
     parser.add_argument("--elite-weight", type=float, default=DEF_ELITE_WEIGHT,
                         help="Elite-Faktor e (nur EAS, Folie 9: 0 ≤ e ≤ 1)")
+    parser.add_argument("--stagnation-limit", type=int, default=DEF_STAGNATION_LIMIT,
+                        help="Abbruch nach N Iterationen ohne Verbesserung (0=deaktiviert)")
     parser.add_argument("--no-vis", action="store_true",
                         help="Live-Plot deaktivieren")
     parser.add_argument("--no-log", action="store_true",
@@ -76,21 +73,21 @@ def main():
     alpha = args.alpha
     beta = args.beta
     elite_weight = args.elite_weight
+    stagnation_limit = args.stagnation_limit
 
-    # Flags: Kommandozeile (--no-vis / --no-log) überschreibt Standardeinstellung
     enable_visualization = False if args.no_vis else DEF_VISUALIZATION
     enable_logging = False if args.no_log else DEF_LOGGING
     log_file = args.log_file
 
     # ===================== TRACKING =====================
-    best_fitness_per_round = []     # Bester Fitness-Wert pro Iteration
-    avg_fitness_per_round = []      # Durchschnittlicher Fitness-Wert pro Iteration
+    best_fitness_per_round = []
+    avg_fitness_per_round = []
 
-    # All-Time-Best (best-so-far) Variablen
     global_best_value = -1
     global_best_backpack = []
     global_best_weight = 0
     global_best_iteration = -1
+    stagnation_counter = 0
 
     # ===================== PROBLEM LADEN =====================
     with open("problem.json", "r") as f:
@@ -99,13 +96,9 @@ def main():
     number_items = problem_data["number_items"]
     max_load = problem_data["max_load"]
 
-    # Item-Objekte erzeugen
     items = []
     for data in problem_data["items"]:
         items.append(Item(data["id"], data["weight"], data["value"]))
-
-    # Maximaler theoretischer Wert (zur Normierung der Pheromonablage)
-    max_possible_value = sum(item.value for item in items)
 
     # ===================== AMEISEN ERZEUGEN =====================
     ants = [Ant(max_load, number_items) for _ in range(group_size)]
@@ -120,6 +113,8 @@ def main():
         print(f"    Elite-Gewicht e = {elite_weight}")
     print(f"    {group_size} Ameisen, {iterations} Iterationen")
     print(f"    alpha={alpha}, beta={beta}, rho={evaporation_rate}")
+    if stagnation_limit > 0:
+        print(f"    Stagnationslimit: {stagnation_limit} Iterationen")
     print()
 
     # ===================== HAUPTSCHLEIFE =====================
@@ -127,35 +122,38 @@ def main():
 
         # --- Phase 1: Lösungskonstruktion durch alle Ameisen ---
         for a in ants:
-            # Zufällige Startposition (jede Ameise beginnt bei einem anderen Item)
             starting_position = random.randint(0, number_items - 1)
             a.reset()
 
-            # Jede Ameise besucht alle Items genau einmal (zyklische Reihenfolge)
             for position in range(number_items):
                 current_item = items[(starting_position + position) % number_items]
                 a.decision(current_item, alpha, beta)
 
         # --- Phase 2: Auswertung ---
-        # Beste Ameise dieser Iteration (iteration-best)
         round_best_ant = max(ants, key=lambda x: x.current_value)
 
-        # All-Time-Best (best-so-far) aktualisieren
+        # All-Time-Best aktualisieren
         if round_best_ant.current_value > global_best_value:
             global_best_value = round_best_ant.current_value
             global_best_backpack = list(round_best_ant.backpack)
             global_best_weight = round_best_ant.current_load
             global_best_iteration = iteration + 1
+            stagnation_counter = 0
+        else:
+            stagnation_counter += 1
 
         # Lernkurven-Daten speichern
         avg_value = sum(a.current_value for a in ants) / group_size
         best_fitness_per_round.append(round_best_ant.current_value)
         avg_fitness_per_round.append(avg_value)
 
-        # --- Phase 3: Pheromonupdate ---
-        # AC:  τ = (1-ρ)·τ + Σ Δk
-        # EAS: τ = (1-ρ)·τ + Σ Δk + e·Δbs
+        # Frühes Abbrechen bei Stagnation
+        if stagnation_limit > 0 and stagnation_counter >= stagnation_limit:
+            print(f"Abbruch: Keine Verbesserung seit {stagnation_limit} Iterationen "
+                  f"(Iteration {iteration + 1})")
+            break
 
+        # --- Phase 3: Pheromonupdate ---
         # Schritt 3a: Verdampfung → (1-ρ)·τ
         for current_item in items:
             current_item.evaporate(evaporation_rate)
@@ -164,16 +162,14 @@ def main():
         for a in ants:
             for current_item in items:
                 decision = a.backpack[current_item.id]
-                current_item.add_reward(decision, a.current_value, max_possible_value)
+                current_item.add_reward(decision, a.current_value)
 
         # Schritt 3c: Elitärer Bonus – NUR bei EAS (Folie 9)
         if mode == "EAS" and global_best_value > 0:
             for current_item in items:
                 decision = global_best_backpack[current_item.id]
-                current_item.add_reward(
-                    decision, global_best_value, max_possible_value,
-                    elite_factor=elite_weight
-                )
+                current_item.add_reward(decision, global_best_value,
+                                        elite_factor=elite_weight)
 
         # --- Visualisierung aktualisieren ---
         if enable_visualization:
@@ -183,12 +179,11 @@ def main():
             )
 
     # ===================== ERGEBNIS =====================
-    print(f"=== OPTIMIERUNG ABGESCHLOSSEN ({mode}) ===")
+    print(f"\n=== OPTIMIERUNG ABGESCHLOSSEN ({mode}) ===")
     print(f"Bester Rucksack-Wert: {global_best_value} (Iteration {global_best_iteration})")
     print(f"Benutztes Gewicht:    {global_best_weight} / {max_load}")
     print(f"Rucksack-Belegung:    {global_best_backpack}")
 
-    # Plot offen halten (falls aktiv)
     if enable_visualization:
         visualization.show_final()
 
@@ -197,7 +192,6 @@ def main():
         file_exists = os.path.isfile(log_file)
         with open(log_file, "a", newline="") as f:
             writer = csv.writer(f, delimiter=';')
-            # Header nur beim ersten Schreiben
             if not file_exists:
                 writer.writerow([
                     "mode", "alpha", "beta", "evaporation", "group_size",

@@ -46,12 +46,12 @@ class Item:
         self.pheromone_yes *= (1 - rho)
         self.pheromone_no *= (1 - rho)
 
-    def add_reward(self, decision, solution_value, max_value, elite_factor=1.0):
+    def add_reward(self, decision, solution_value, elite_factor=1.0):
         """
         Pheromonablage auf der gewählten Entscheidungskante.
 
-        Formel:
-            Δτ = (solution_value / max_value) · elite_factor
+        Formel (klassisch ohne Normierung):
+            Δτ = solution_value · elite_factor
 
         Nutzung:
             - AC:  elite_factor = 1.0 (Standard, kein Bonus)
@@ -60,11 +60,9 @@ class Item:
         Args:
             decision:       1 (eingepackt) oder 0 (nicht eingepackt).
             solution_value: Gesamtwert der Lösung dieser Ameise.
-            max_value:      Maximaler möglicher Wert (zur Normierung).
             elite_factor:   Gewichtungsfaktor e für Elite-Bonus (Standard: 1.0).
         """
-        # Δτ = (Lösungsqualität / Normierungswert) · Elitär-Faktor
-        delta_tau = (solution_value / max_value) * elite_factor
+        delta_tau = solution_value * elite_factor
 
         if decision == 1:
             self.pheromone_yes += delta_tau

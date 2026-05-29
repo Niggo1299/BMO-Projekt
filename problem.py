@@ -65,25 +65,21 @@ def solve_knapsack_dp(items, capacity):
     Returns:
         optimal_value:  Bester erreichbarer Nutzwert.
         optimal_items:  Liste der IDs der gewählten Items.
+        total_weight:   Gesamtgewicht der optimalen Lösung.
     """
     n = len(items)
 
-    # DP-Tabelle: dp[w] = bester Wert bei Kapazität w
     dp = [0] * (capacity + 1)
-
-    # Für Rückverfolgung: welches Item wurde bei welcher Kapazität gewählt?
     chosen = [[False] * (capacity + 1) for _ in range(n)]
 
     for i in range(n):
         wi = items[i]["weight"]
         vi = items[i]["value"]
-        # Rückwärts iterieren um doppelte Nutzung zu vermeiden
         for w in range(capacity, wi - 1, -1):
             if dp[w - wi] + vi > dp[w]:
                 dp[w] = dp[w - wi] + vi
                 chosen[i][w] = True
 
-    # Rückverfolgung: welche Items wurden gewählt?
     optimal_value = dp[capacity]
     optimal_items = []
     w = capacity
@@ -93,7 +89,8 @@ def solve_knapsack_dp(items, capacity):
             w -= items[i]["weight"]
 
     optimal_items.reverse()
-    total_weight = sum(items[i]["weight"] for i in range(n) if items[i]["id"] in optimal_items)
+    total_weight = sum(items[i]["weight"] for i in range(n)
+                       if items[i]["id"] in optimal_items)
 
     return optimal_value, optimal_items, total_weight
 
@@ -101,12 +98,12 @@ def solve_knapsack_dp(items, capacity):
 def solve_knapsack_greedy(items, capacity):
     """
     Greedy-Lösung (nach Profit/Gewicht-Verhältnis) als untere Schranke.
-    Nützlich wenn DP zu langsam wäre (große Kapazitäten).
 
     Returns:
         greedy_value, greedy_items, total_weight
     """
-    sorted_items = sorted(items, key=lambda x: x["value"] / x["weight"], reverse=True)
+    sorted_items = sorted(items, key=lambda x: x["value"] / x["weight"],
+                          reverse=True)
 
     total_value = 0
     total_weight = 0
@@ -127,7 +124,6 @@ def generate_problem(n, c, g, f, epsilon, s, b, filename, seed):
     """
     random.seed(seed)
 
-    # Items pro Gruppe berechnen
     last_group_size = math.floor(n * f)
     m = math.floor((n - last_group_size) / (g - 1))
     last_group_size = n - (g - 1) * m
@@ -148,7 +144,7 @@ def generate_problem(n, c, g, f, epsilon, s, b, filename, seed):
             })
             item_id += 1
 
-    # Gruppe g: kleine unkorrellierte Items
+    # Gruppe g: kleine unkorrelierte Items
     for _ in range(last_group_size):
         items_data.append({
             "id": item_id,
@@ -166,7 +162,8 @@ def generate_problem(n, c, g, f, epsilon, s, b, filename, seed):
 
     # Greedy zum Vergleich
     greedy_value, greedy_items, greedy_weight = solve_knapsack_greedy(items_data, c)
-    greedy_gap = (1 - greedy_value / optimal_value) * 100 if optimal_value > 0 else 0
+    greedy_gap = ((1 - greedy_value / optimal_value) * 100
+                  if optimal_value > 0 else 0)
 
     # Problem mit Lösung speichern
     problem = {
@@ -233,8 +230,7 @@ def main():
         for diff, opt in results.items():
             print(f"  {diff:>6}: Optimum = {opt:,}")
         print(f"{'='*55}")
-        print("  Dateien: problem_easy.json, problem_medium.json,")
-        print("           problem_hard.json")
+        print("  Dateien: problem.json")
 
 
 if __name__ == "__main__":

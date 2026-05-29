@@ -8,7 +8,6 @@ Pro Konfiguration werden mehrere unabhängige Läufe durchgeführt,
 da das Verhalten der Ameisen stochastisch (probabilistisch) ist.
 
 Ergebnis: CSV-Datei mit allen Konfigurationen und deren Fitness-Werten.
-          Auswertung z.B. mit Excel, Pandas oder einem eigenen Skript.
 
 Aufruf:
     python optimizer.py
@@ -22,29 +21,22 @@ import sys
 def run_experiments():
     """
     Führt den vollständigen faktoriellen Versuchsplan durch.
-
-    Schritte:
-    1. Alle Parameterkombinationen für AC generieren (ohne elite_weight)
-    2. Alle Parameterkombinationen für EAS generieren (mit elite_weight)
-    3. Jede Kombination num_runs_per_config Mal ausführen
-    4. Ergebnisse werden von main.py in die CSV geschrieben
     """
 
     # ===================== AUSWAHL =====================
-    AC = True   # Setze auf True, um AC-Experimente auszuführen
-    EAS = False  # Setze auf True, um EAS-Experimente auszuführen
+    AC = True
+    EAS = False
 
     # ===================== PARAMETER-GRID =====================
-    # Definierte Stufen für jeden Faktor (statistische Versuchsplanung)
     alphas = [1.0, 1.5, 2.0]
     betas = [1.0, 3.0, 5.0]
     evaporations = [0.1, 0.3, 0.5]
     group_sizes = [10, 25, 50]
-    elite_weights = [0.2, 0.5, 1.0]    # Nur relevant für EAS
+    elite_weights = [0.2, 0.5, 1.0]
 
     # ===================== AUSFÜHRUNGSPARAMETER =====================
-    num_runs_per_config = 5             # Wiederholungen pro Parameterkombination
-    iterations = 200                     # Iterationen pro Einzellauf
+    num_runs_per_config = 5
+    iterations = 200
     log_file = "optimization_results.csv"
 
     print(f"=== Parameter-Optimierung ===")
@@ -55,10 +47,11 @@ def run_experiments():
 
     # ===================== ANT-CYCLE (AC) =====================
     if AC:
-        # Bei AC hat elite_weight keine Auswirkung → wird nicht variiert
-        ac_combinations = list(itertools.product(alphas, betas, evaporations, group_sizes))
+        ac_combinations = list(itertools.product(
+            alphas, betas, evaporations, group_sizes))
         total_ac_runs = len(ac_combinations) * num_runs_per_config
-        print(f"--- AC: {len(ac_combinations)} Kombinationen × {num_runs_per_config} Läufe = {total_ac_runs} Runs ---")
+        print(f"--- AC: {len(ac_combinations)} Kombinationen "
+              f"× {num_runs_per_config} Läufe = {total_ac_runs} Runs ---")
 
         run_counter = 0
         for a, b, evap, gs in ac_combinations:
@@ -72,14 +65,13 @@ def run_experiments():
                     "--evaporation", str(evap),
                     "--group-size", str(gs),
                     "--iterations", str(iterations),
+                    "--stagnation-limit", "0",
                     "--no-vis",
                     "--log-file", log_file
                 ]
 
-                # main.py im Hintergrund ausführen (ohne Konsolenausgabe)
                 subprocess.run(cmd, stdout=subprocess.DEVNULL)
 
-                # Fortschrittsanzeige alle 10 Läufe
                 if run_counter % 10 == 0:
                     print(f"    AC Fortschritt: {run_counter}/{total_ac_runs}")
 
@@ -87,12 +79,11 @@ def run_experiments():
 
     # ===================== ELITÄRES AMEISEN-SYSTEM (EAS) =====================
     if EAS:
-        # Bei EAS wird zusätzlich elite_weight variiert
         eas_combinations = list(itertools.product(
-            alphas, betas, evaporations, group_sizes, elite_weights
-        ))
+            alphas, betas, evaporations, group_sizes, elite_weights))
         total_eas_runs = len(eas_combinations) * num_runs_per_config
-        print(f"--- EAS: {len(eas_combinations)} Kombinationen × {num_runs_per_config} Läufe = {total_eas_runs} Runs ---")
+        print(f"--- EAS: {len(eas_combinations)} Kombinationen "
+              f"× {num_runs_per_config} Läufe = {total_eas_runs} Runs ---")
 
         run_counter = 0
         for a, b, evap, gs, ew in eas_combinations:
@@ -107,6 +98,7 @@ def run_experiments():
                     "--group-size", str(gs),
                     "--elite-weight", str(ew),
                     "--iterations", str(iterations),
+                    "--stagnation-limit", "0",
                     "--no-vis",
                     "--log-file", log_file
                 ]
@@ -122,7 +114,7 @@ def run_experiments():
     total_runs = total_ac_runs + total_eas_runs
     print(f"=== Alle {total_runs} Experimente abgeschlossen ===")
     print(f"Ergebnisse gespeichert in: {log_file}")
-    print("Auswertung z.B. mit: pandas.read_csv('{}', delimiter=';')".format(log_file))
+    print("Auswertung mit: python evaluate.py")
 
 
 if __name__ == "__main__":

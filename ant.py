@@ -31,9 +31,9 @@ class Ant:
         self.current_load = 0
         self.current_value = 0
 
-    def _fits_in_backpack(self, item):
+    def _exceeds_capacity(self, item):
         """
-        Prüft, ob das Item noch in den Rucksack passt.
+        Prüft, ob das Item die Kapazität überschreiten würde.
 
         Returns:
             True wenn Item NICHT mehr passt (Kapazität würde überschritten).
@@ -58,7 +58,7 @@ class Ant:
             True wenn Item eingepackt wurde, False sonst.
         """
         # Kapazitätsprüfung: Falls Item nicht passt → zwingend NEIN
-        if self._fits_in_backpack(item):
+        if self._exceeds_capacity(item):
             self.backpack[item.id] = 0
             return False
 

@@ -16,7 +16,7 @@ def setup_live_plot():
     Returns:
         fig, ax1, ax2: Matplotlib Figure und Axes-Objekte.
     """
-    plt.ion()  # Interaktiver Modus für Echtzeit-Updates
+    plt.ion()
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 10))
     return fig, ax1, ax2
 
@@ -40,7 +40,7 @@ def update_live_plot(fig, ax1, ax2, items, iteration, total_items,
     x_axis = range(total_items)
 
     yes_pheromones = [item.pheromone_yes for item in items]
-    no_pheromones = [-item.pheromone_no for item in items]  # Negativ für Darstellung
+    no_pheromones = [-item.pheromone_no for item in items]
 
     ax1.bar(x_axis, yes_pheromones, color='green', label='JA-Pheromon', alpha=0.7)
     ax1.bar(x_axis, no_pheromones, color='red', label='NEIN-Pheromon', alpha=0.7)
