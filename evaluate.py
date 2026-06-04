@@ -14,6 +14,7 @@ Aufruf:
 """
 
 import argparse
+import json
 import pandas as pd
 
 
@@ -31,6 +32,21 @@ def load_data(filepath):
     print(f"Datei geladen: {filepath}")
     print(f"  → {len(df)} Zeilen, {df['mode'].nunique()} Modi\n")
     return df
+
+
+def load_optimal_value(problem_path="data/problem.json"):
+    """
+    Lädt den optimalen Lösungswert aus der Problemdefinition.
+
+    Returns:
+        Optimaler Nutzwert (int), oder None falls nicht vorhanden.
+    """
+    try:
+        with open(problem_path, "r") as f:
+            problem = json.load(f)
+        return problem["optimal_solution"]["value"]
+    except (FileNotFoundError, KeyError):
+        return None
 
 
 def compute_grouped_statistics(df):
@@ -212,18 +228,30 @@ def main():
     args = parser.parse_args()
 
     df = load_data(args.file)
+    optimal_value = load_optimal_value()
+
     grouped = compute_grouped_statistics(df)
     print(f"Konfigurationen gefunden: {len(grouped)}")
     print(f"  → AC:  {len(grouped[grouped['mode'] == 'AC'])}")
     print(f"  → EAS: {len(grouped[grouped['mode'] == 'EAS'])}")
+    if optimal_value:
+        print(f"  → Bekanntes Optimum: {optimal_value}")
     print()
 
     scored = compute_score(grouped, args.weight_quality, args.weight_speed)
+
+    # Relative Performance hinzufügen (% vom Optimum)
+    if optimal_value:
+        scored["pct_optimal"] = scored["median_value"] / optimal_value * 100
 
     print_results(scored, "AC", top_n=args.top)
     print_results(scored, "EAS", top_n=args.top)
     compare_modes(scored)
     export_results(scored, args.output)
+
+    if optimal_value:
+        print(f"  ℹ️  Relative Performance (% vom Optimum) wurde in der"
+              f" Ausgabe-CSV ergänzt.")
 
 
 if __name__ == "__main__":

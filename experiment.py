@@ -28,14 +28,14 @@ def run_experiments():
     EAS = True
 
     # ===================== PARAMETER-GRID =====================
-    alphas = [0.5, 1.0, 1.5, 2.0]
-    betas = [1.0, 3.0, 5.0]
-    evaporations = [0.1, 0.4, 0.8]
-    group_sizes = [10, 40, 80]
-    elite_weights = [0.2, 0.5, 1.0]
+    alphas = [0.5, 0.75, 1.0, 1.25, 1.5]
+    betas = [2.0, 3.0, 4.0, 5.0]
+    evaporations = [0.3, 0.5, 0.65, 0.8]
+    group_sizes = [20, 40, 60, 80]
+    elite_weights = [0.1, 0.3, 0.5, 0.8, 1.0]
 
     # ===================== AUSFÜHRUNGSPARAMETER =====================
-    num_runs_per_config = 3
+    num_runs_per_config = 10
     iterations = 200
     log_file = "data/experiment_results.csv"
 
