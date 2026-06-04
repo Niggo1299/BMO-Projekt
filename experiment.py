@@ -42,8 +42,8 @@ def run_experiments():
     EAS = True
 
     # ===================== OPTIMIERTES PARAMETER-GRID (je 3 Varianten) =====================
-    alphas = [0.6, 1.0, 1.4]
-    betas = [2.0, 3.0, 5.0]
+    alphas = [0.25, 0.5, 0.75, 1.0]
+    betas = [2.0, 5.0, 10.0]
     evaporations = [0.3, 0.5, 0.8]
     group_sizes = [20, 50, 100]
     elite_weights = [0.2, 0.5, 1.0]
@@ -81,7 +81,7 @@ def run_experiments():
                     "--evaporation", str(evap),
                     "--group-size", str(gs),
                     "--iterations", str(iterations),
-                    "--stagnation-limit", "30",
+                    "--stagnation-limit", "60",
                     "--no-vis",
                     "--no-log"  # Wir loggen direkt im Hauptthread, um Race Conditions zu vermeiden
                 ]

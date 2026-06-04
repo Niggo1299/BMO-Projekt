@@ -33,7 +33,7 @@ def main():
     DEF_ALPHA = 1.0
     DEF_BETA = 2.0
     DEF_ELITE_WEIGHT = 1.0
-    DEF_STAGNATION_LIMIT = 50
+    DEF_STAGNATION_LIMIT = 60
     DEF_VISUALIZATION = False
     DEF_LOGGING = True
     DEF_LOG_FILE = "data/results.csv"
