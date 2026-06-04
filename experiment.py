@@ -42,15 +42,15 @@ def run_experiments():
     EAS = True
 
     # ===================== OPTIMIERTES PARAMETER-GRID (je 3 Varianten) =====================
-    alphas = [1.0, 1.5, 2.0]
+    alphas = [0.6, 1.0, 1.4]
     betas = [2.0, 3.0, 5.0]
     evaporations = [0.3, 0.5, 0.8]
-    group_sizes = [20, 45, 80]
+    group_sizes = [20, 50, 100]
     elite_weights = [0.2, 0.5, 1.0]
 
     # ===================== AUSFÜHRUNGSPARAMETER =====================
-    num_runs_per_config = 5
-    iterations = 100
+    num_runs_per_config = 7
+    iterations = 200
     log_file = "data/experiment_results.csv"
 
     # Ordner erstellen, falls nicht vorhanden
