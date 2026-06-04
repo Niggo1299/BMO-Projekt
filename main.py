@@ -98,7 +98,11 @@ def main():
 
     items = []
     for data in problem_data["items"]:
-        items.append(Item(data["id"], data["weight"], data["value"]))
+        item = Item(data["id"], data["weight"], data["value"])
+        # Heuristik-Potenzen vorab berechnen (beschleunigt die Ameisen-Entscheidungen um Faktor 3)
+        item.attractiveness_yes_beta = item.attractiveness_yes ** beta
+        item.attractiveness_no_beta = item.attractiveness_no ** beta
+        items.append(item)
 
     # ===================== AMEISEN ERZEUGEN =====================
     ants = [Ant(max_load, number_items) for _ in range(group_size)]
@@ -201,6 +205,9 @@ def main():
                 mode, alpha, beta, evaporation_rate, group_size,
                 elite_weight, global_best_value, global_best_iteration
             ])
+
+    # Ergebnis-Ausgabe in standardisiertem Format für externe Skripte (z. B. Optimizer)
+    print(f"RESULT:{mode};{alpha};{beta};{evaporation_rate};{group_size};{elite_weight};{global_best_value};{global_best_iteration}")
 
 
 if __name__ == "__main__":

@@ -18,35 +18,45 @@ import time
 
 
 DIFFICULTY_CONFIGS = {
+    # Leicht: Theorem 2 greift häufig, viele dominierte Items
+    # Paper: g=2 oder g=6, grosses epsilon, n niedrig
     "easy": {
-        "n": 100,
-        "c": 5000,
-        "g": 3,
-        "f": 0.2,
-        "epsilon": 0.1,
-        "s": 50,
+        "n": 400,
+        "c": 1_000_000,     # c=10^6 (Paper-Minimum, DP-machbar)
+        "g": 2,             # Paper: g=2 → Theorem 2 greift oft
+        "f": 0.2,           # Kaum Einfluss laut Paper
+        "epsilon": 0.1,     # Grosses eps → bricht harte Bedingungen
+        "s": 100,           # Paper: kaum Einfluss
         "b": 2,
         "seed": 1,
         "filename": "data/problem.json",
     },
+    # Mittel: Theorem-2-Reduktion sinkt, Suchraum wächst
+    # Paper: g=10, epsilon=10^-3, n=600-800
+    # Hinweis: c=10^8 wäre Paper-konform, aber DP braucht dann
+    # ~800MB RAM. Wir nutzen c=10^6 und erhöhen g+n stattdessen.
     "medium": {
-        "n": 200,
-        "c": 5000,
-        "g": 5,
+        "n": 600,
+        "c": 1_000_000,     # c=10^6 (DP-Limit in Python)
+        "g": 10,            # Paper: g=10 → kaum Reduktion möglich
         "f": 0.2,
-        "epsilon": 0.01,
-        "s": 50,
+        "epsilon": 0.001,   # eps=10^-3
+        "s": 200,           # Paper-Empfehlung für medium
         "b": 2,
         "seed": 2,
         "filename": "data/problem.json",
     },
+    # Schwer: Maximale kombinatorische Härte
+    # Paper: g=14, epsilon=10^-5 (härter als eps=0!), n=1000+
+    # Hinweis: c=10^10 wäre Paper-konform, ist aber unmöglich
+    # für Python-DP (~80GB RAM). n=800 statt 1000+ wegen Laufzeit.
     "hard": {
-        "n": 400,
-        "c": 10000,
-        "g": 8,
-        "f": 0.15,
-        "epsilon": 0.001,
-        "s": 80,
+        "n": 800,
+        "c": 1_000_000,     # c=10^6 (DP-Limit)
+        "g": 14,            # Paper: g=14 → keine Reduktion mehr
+        "f": 0.1,           # Paper: f in {0.1, 0.2, 0.3}
+        "epsilon": 0.00001, # eps=10^-5 (härtester Wert laut Paper)
+        "s": 300,           # Paper-Empfehlung für hard
         "b": 2,
         "seed": 3,
         "filename": "data/problem.json",
