@@ -95,14 +95,23 @@ def main():
 
     number_items = problem_data["number_items"]
     max_load = problem_data["max_load"]
+    optimal_value = problem_data["optimal_solution"]["value"]
 
     items = []
     for data in problem_data["items"]:
-        item = Item(data["id"], data["weight"], data["value"])
+        items.append(Item(data["id"], data["weight"], data["value"]))
+
+    # Heuristik-Werte (eta) normieren: Teilen durch das Maximum im aktuellen Problem
+    max_eta_yes = max(item.attractiveness_yes for item in items)
+    max_eta_no = max(item.attractiveness_no for item in items)
+
+    for item in items:
+        item.attractiveness_yes /= max_eta_yes
+        item.attractiveness_no /= max_eta_no
+        
         # Heuristik-Potenzen vorab berechnen (beschleunigt die Ameisen-Entscheidungen um Faktor 3)
         item.attractiveness_yes_beta = item.attractiveness_yes ** beta
         item.attractiveness_no_beta = item.attractiveness_no ** beta
-        items.append(item)
 
     # ===================== AMEISEN ERZEUGEN =====================
     ants = [Ant(max_load, number_items) for _ in range(group_size)]
@@ -166,13 +175,13 @@ def main():
         for a in ants:
             for current_item in items:
                 decision = a.backpack[current_item.id]
-                current_item.add_reward(decision, a.current_value)
+                current_item.add_reward(decision, a.current_value, optimal_value)
 
         # Schritt 3c: Elitärer Bonus – NUR bei EAS (Folie 9)
         if mode == "EAS" and global_best_value > 0:
             for current_item in items:
                 decision = global_best_backpack[current_item.id]
-                current_item.add_reward(decision, global_best_value,
+                current_item.add_reward(decision, global_best_value, optimal_value,
                                         elite_factor=elite_weight)
 
         # --- Visualisierung aktualisieren ---
