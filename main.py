@@ -27,8 +27,8 @@ import visualization
 def main():
     # ===================== STANDARDEINSTELLUNGEN =====================
     DEF_MODE = "AC"
-    DEF_GROUP_SIZE = 50
-    DEF_EVAPORATION = 0.65
+    DEF_GROUP_SIZE = 30
+    DEF_EVAPORATION = 0.3
     DEF_ITERATIONS = 100
     DEF_ALPHA = 1.0
     DEF_BETA = 2.0
