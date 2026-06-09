@@ -39,11 +39,11 @@ def run_experiments():
 
     # ===================== AUSWAHL =====================
     AC = True
-    EAS = True
+    EAS = False
 
     # ===================== OPTIMIERTES PARAMETER-GRID (je 3 Varianten) =====================
-    alphas = [0.5, 1.0, 1.5]
-    betas = [2.0, 3.5, 5.0]
+    alphas = [1.0, 1.5, 2.0]
+    betas = [1.0, 2.0, 3.0]
     evaporations = [0.1, 0.3, 0.5]
     group_sizes = [10, 30, 50]
     elite_weights = [0.2, 0.5, 1.0]
@@ -144,7 +144,7 @@ def run_experiments():
 
     print(f"\n=== Alle {total_runs} Experimente erfolgreich abgeschlossen ===")
     print(f"Ergebnisse gespeichert in: {log_file}")
-    print("Auswertung mit: python evaluate.py")
+    print("Auswertung mit: python parameterstudie.py")
 
 
 if __name__ == "__main__":
