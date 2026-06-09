@@ -42,10 +42,10 @@ def run_experiments():
     EAS = False
 
     # ===================== OPTIMIERTES PARAMETER-GRID (je 3 Varianten) =====================
-    alphas = [1.0, 1.4, 1.8]
-    betas = [0.6, 1.0, 1.4]
+    alphas = [0.6, 1.0, 1.4]
+    betas = [0.4, 0.8, 1.2]
     evaporations = [0.25, 0.45, 0.65]
-    group_sizes = [85, 110, 135]
+    group_sizes = [110, 145, 180]
     elite_weights = [0.25, 0.45, 0.65]
 
     # ===================== AUSFÜHRUNGSPARAMETER =====================
