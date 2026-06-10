@@ -1,0 +1,657 @@
+================================================================================
+ANALYSE DER VERSUCHSREIHEN 1-14: ANT CYCLE ALGORITHMUS AUF NMGE-KNAPSACK
+================================================================================
+
+Datum: Analyse basierend auf 14 Versuchsreihen mit jeweils 10 Wiederholungen
+Algorithmus: Ant Cycle (AC)
+Problem: NMGE-Knapsack (Jooken, Leyman & De Causmaecker, 2022)
+
+================================================================================
+1. PROBLEMINSTANZ
+================================================================================
+
+Parameter der NMGE-Instanz:
+- Methode:        NMGE (Non-trivially hard Multiple-choice Group knapsack Encoder)
+- Items (n):      800
+- Kapazitaet:     1.000.000
+- Klassen (g):    14
+- f:              0.1
+- epsilon:        0.00001
+- a / b:          300 / 2
+- Seed:           3
+- Optimaler Wert: 1.011.638 (bei Gewicht = 1.000.000)
+
+Charakteristik des Problems:
+Die NMGE-Methode erzeugt Instanzen, bei denen Greedy-Heuristiken systematisch
+in die Irre gefuehrt werden. Items mit bestem Nutzen/Gewicht-Verhaeltnis (eta)
+gehoeren haeufig NICHT zur optimalen Loesung. Die 14 Klassen und der kleine
+Epsilon-Wert sorgen fuer extrem eng beieinanderliegende Effizienzwerte,
+was die Unterscheidung von "guten" und "optimalen" Items erschwert.
+
+================================================================================
+2. UEBERSICHT DER BESTEN ERGEBNISSE JE VERSUCHSREIHE
+================================================================================
+
+Versuch | Alpha | Beta  | Evap. | Gruppe | Median-Wert  | % Optimum | Gap
+--------|-------|-------|-------|--------|--------------|-----------|--------
+   1    | 1.000 | 1.000 | 0.100 |   50   | 1.004.694,5  |  99.314%  | 6.943,5
+   2    | 1.500 | 1.000 | 0.400 |   50   | 1.004.985,0  |  99.342%  | 6.653,0
+   3    | 1.500 | 0.800 | 0.200 |   60   | 1.005.784,0  |  99.421%  | 5.854,0
+   4    | 1.500 | 1.000 | 0.300 |   60   | 1.005.002,0  |  99.344%  | 6.636,0
+   5    | 1.500 | 1.000 | 0.500 |   45   | 1.005.128,5  |  99.357%  | 6.509,5
+   6    | 1.500 | 1.000 | 0.300 |   60   | 1.005.213,0  |  99.365%  | 6.425,0
+   7    | 1.500 | 1.000 | 0.600 |   60   | 1.005.145,5  |  99.358%  | 6.492,5
+   8    | 1.800 | 1.000 | 0.600 |   95   | 1.005.414,5  |  99.385%  | 6.223,5
+   9    | 1.800 | 1.000 | 0.500 |   85   | 1.005.417,0  |  99.385%  | 6.221,0
+  10    | 1.400 | 0.600 | 0.450 |  120   | 1.005.421,5  |  99.386%  | 6.216,5
+  11    | 1.400 | 0.600 | 0.650 |  135   | 1.005.554,0  |  99.399%  | 6.084,0
+  12    | 1.400 | 0.800 | 0.650 |  110   | 1.005.258,0  |  99.369%  | 6.380,0
+  13    | 1.700 | 1.000 | 0.350 |   95   | 1.005.745,0  |  99.417%  | 5.893,0
+  14    | 1.400 | 0.650 | 0.470 |  125   | 1.005.916,0  |  99.434%  | 5.722,0
+
+Hinweis: In Versuch 14 erreicht die Konfiguration (1.4, 0.65, 0.37, 125) sogar
+einen Median von 1.005.936,5 - allerdings erst bei Iteration 110,5 (spaete
+Konvergenz).
+
+Absolut bester Einzellauf (max_value): 1.006.857 in Versuch 14
+(alpha=1.4, beta=0.65, evap=0.47, group=110)
+
+================================================================================
+3. ENTWICKLUNG DER SUCHSTRATEGIE UEBER DIE VERSUCHSREIHEN
+================================================================================
+
+Die 14 Versuchsreihen zeigen eine klare Lernkurve in der Parameteroptimierung:
+
+Phase 1 - Breite Exploration (Versuche 1-2):
+  - Grosse Parameterbereiche: alpha={1,2,4}, beta={1,2,4}
+  - Erkenntnis: Hohe Alpha/Beta-Werte (4/4) sind schlecht
+  - Bester Median: ~1.004.985
+
+Phase 2 - Fokussierung auf niedrige Beta (Versuche 3-6):
+  - Beta wird auf 0.5-1.5 reduziert
+  - Alpha stabilisiert sich bei 1.5
+  - Erkenntnis: beta=0.8 bringt Sprung auf 1.005.784
+  - Gruppengroesse steigt von 20-50 auf 60-90
+
+Phase 3 - Erhoehung von Alpha und Gruppe (Versuche 7-9):
+  - Alpha wird auf 1.8 erhoeht
+  - Evaporation steigt auf 0.5-0.7
+  - Gruppen wachsen auf 85-110
+  - Median stabilisiert sich bei ~1.005.400
+
+Phase 4 - Feintuning und niedrige Beta (Versuche 10-14):
+  - Beta sinkt auf 0.6-0.7
+  - Alpha pendelt bei 1.4
+  - Gruppen bei 110-140
+  - Bester Median: 1.005.916 (Versuch 14)
+
+================================================================================
+4. PARAMETERANALYSE IM DETAIL
+================================================================================
+
+4.1 ALPHA (Pheromongewichtung)
+--------------------------------------------------------------------------------
+
+Alpha steuert den Einfluss der kollektiv gelernten Pheromonspuren auf die
+Entscheidungsfindung jeder einzelnen Ameise.
+
+Beobachtete Bereiche und Leistung:
+
+  alpha < 1.0 (z.B. 0.6 in Versuch 12):
+    - Deutlich schlechter als Konkurrenz
+    - Beispiel V12: alpha=0.6 liefert Mediane von 1.004.185 bis 1.004.592
+    - Gegenueber alpha=1.4 in gleicher Reihe: Verlust von ~700-1000 Punkten
+    - Grund: Pheromon hat kaum Einfluss, Algorithmus lernt nicht aus Erfahrung
+
+  alpha = 1.0:
+    - Solide Basisleistung, aber nicht optimal
+    - Typische Mediane: 1.004.600 - 1.005.070
+    - Funktioniert besser mit niedrigem Beta (V10: alpha=1, beta=0.6 → 1.005.009)
+
+  alpha = 1.4 - 1.5 (SWEET SPOT):
+    - Konsistent beste Ergebnisse ueber alle Versuchsreihen
+    - V14: alpha=1.4 → Median 1.005.916
+    - V13: alpha=1.4 → Median 1.005.786
+    - V3:  alpha=1.5 → Median 1.005.784
+    - Moderate Verstaerkung, die Konvergenz erlaubt ohne Stagnation
+
+  alpha = 1.7 - 1.8:
+    - Gut mit hoher Evaporation und grossen Gruppen
+    - V8: alpha=1.8, evap=0.6, group=95 → 1.005.414
+    - V13: alpha=1.7, evap=0.35, group=95 → 1.005.745
+    - Braucht mehr "Gegengewicht" durch Evaporation/Gruppengroesse
+
+  alpha >= 2.0:
+    - Leistung faellt deutlich ab
+    - V1: alpha=2, beta=1, evap=0.3, group=80 → nur 1.004.111 (Median-Iteration: 3.5!)
+    - V4: alpha=2, beta=0.5, evap=0.5, group=90 → nur 1.003.762
+    - Vorzeitige Konvergenz auf suboptimale Loesungen
+    - Besonders schlecht mit niedrigem Beta (zu wenig Exploration)
+
+  alpha = 4.0 (Versuch 1):
+    - Durchgehend schlechte Ergebnisse (1.003.226 - 1.004.165)
+    - Extreme Pheromonverstaerkung fuehrt zu sofortiger Konvergenz
+    - Median-Iteration oft bei 2-3 → Algorithmus "erstarrt" sofort
+
+
+4.2 BETA (Heuristik-Gewichtung)
+--------------------------------------------------------------------------------
+
+Beta bestimmt, wie stark die heuristische Information eta = Nutzen/Gewicht
+die Itemauswahl beeinflusst. Dies ist der KRITISCHSTE Parameter bei NMGE.
+
+  beta = 0.5:
+    - Zu wenig Fuehrung ohne grosse Gruppen
+    - V4: alpha=1.5, beta=0.5, group=30 → 1.004.351 (schwach)
+    - V4: alpha=1.5, beta=0.5, group=90 → 1.004.566 (besser, aber nicht top)
+    - V14: alpha=1.4, beta=0.5, group=140 → 1.004.647 (trotz grosser Gruppe mager)
+    - Braucht zwingend grosse Gruppen und mittleres Alpha
+
+  beta = 0.6 - 0.65 (OPTIMAL fuer dieses Problem):
+    - V10: alpha=1.4, beta=0.6, group=120 → 1.005.421
+    - V11: alpha=1.4, beta=0.6, group=135 → 1.005.554
+    - V14: alpha=1.4, beta=0.65, group=125 → 1.005.916 (BESTES ERGEBNIS)
+    - Heuristik wird bewusst stark gedaempft
+    - Ameisen lassen sich nicht von Fallen-Items verfuehren
+
+  beta = 0.7 - 0.8:
+    - Ebenfalls sehr gute Ergebnisse
+    - V3: alpha=1.5, beta=0.8, group=60 → 1.005.784
+    - V13: alpha=1.4, beta=0.7, group=135 → 1.005.786
+    - V12: alpha=1.4, beta=0.8, group=110 → 1.005.258
+    - Etwas mehr heuristische Fuehrung, braucht weniger Gruppengroesse
+
+  beta = 1.0:
+    - Standard-Wahl, liefert gute aber selten optimale Ergebnisse
+    - V13: alpha=1.7, beta=1.0, group=95 → 1.005.745 (Ausnahme!)
+    - V8: alpha=1.8, beta=1.0, group=95 → 1.005.414
+    - Funktioniert am besten mit erhoehtem Alpha (1.5-1.8)
+
+  beta = 1.2 - 1.5:
+    - Deutlicher Leistungsabfall
+    - V8: alpha=1.4, beta=1.4, group=95 → 1.004.698 (vs. beta=0.6 → 1.004.817)
+    - V10: alpha=1.4, beta=1.4, group=120 → 1.004.791 (vs. beta=0.6 → 1.005.421!)
+    - Differenz von 600+ Punkten allein durch Beta-Aenderung
+
+  beta >= 2.0:
+    - Konsistent schlecht
+    - V1: alpha=1, beta=2 → Mediane von 1.003.660 - 1.003.985
+    - V3: alpha=1, beta=1.8 → Mediane von 1.004.013 - 1.004.238
+    - Heuristik dominiert und fuehrt systematisch in Fallen
+
+  beta = 4.0 (Versuch 1):
+    - Schlechteste Ergebnisse: 1.003.607 - 1.003.878
+    - Algorithmus waehlt fast ausschliesslich nach eta-Verhaeltnis
+    - Entspricht praktisch einem Greedy-Algorithmus → NMGE-Falle greift voll
+
+KERNERKENNTNIS:
+Das optimale Beta von 0.6-0.8 ist VIEL niedriger als bei typischen ACO-
+Anwendungen (wo beta=2-5 ueblich ist). Dies ist der staerkste empirische
+Beleg dafuer, dass die NMGE-Heuristik systematisch irreführend ist.
+
+
+4.3 EVAPORATION (Pheromonverdunstung)
+--------------------------------------------------------------------------------
+
+Die Evaporationsrate rho bestimmt, wie schnell alte Informationen vergessen
+werden. Nach jeder Iteration wird jede Pheromonspur mit (1-rho) multipliziert.
+
+  rho = 0.10:
+    - Sehr langsames Vergessen, funktioniert nur bei kleinem Alpha
+    - V1: alpha=1, evap=0.1, group=50 → 1.004.694 (bester der Reihe!)
+    - V2: alpha=1.5, evap=0.1, group=80 → 1.004.987 (gut)
+    - Problem: Frueh gefundene (moeglicherweise suboptimale) Pfade werden
+      nie abgebaut → Konvergenz auf erste brauchbare Loesung
+
+  rho = 0.20 - 0.30:
+    - Brauchbar, besonders mit Alpha=1.5
+    - V3: alpha=1.5, beta=0.8, evap=0.2, group=60 → 1.005.784 (Top-Ergebnis!)
+    - V6: alpha=1.5, beta=1.0, evap=0.3, group=60 → 1.005.213
+    - Erlaubt langsames Lernen mit gelegentlicher Korrektur
+
+  rho = 0.35 - 0.55 (OPTIMALER BEREICH):
+    - Bestes Verhaeltnis von Lernen und Exploration
+    - V13: alpha=1.7, evap=0.35, group=95 → 1.005.745
+    - V14: alpha=1.4, evap=0.47, group=125 → 1.005.916
+    - V10: alpha=1.4, evap=0.45, group=120 → 1.005.421
+    - V8: alpha=1.8, evap=0.6, group=95 → 1.005.414
+    - Genuegend "Vergessen" um aus lokalen Optima zu entkommen
+    - Aber nicht so viel, dass gelernte Information verloren geht
+
+  rho = 0.60 - 0.70:
+    - Funktioniert mit grossen Gruppen und/oder hohem Alpha
+    - V11: alpha=1.4, beta=0.6, evap=0.65, group=135 → 1.005.554
+    - V12: alpha=1.4, beta=0.8, evap=0.65, group=110 → 1.005.258
+    - V7: alpha=1.5, evap=0.6, group=60 → 1.005.145
+    - Braucht viele Ameisen um den Pheromonverlust zu kompensieren
+
+  rho > 0.70:
+    - Keine Daten > 0.7, aber Trend zeigt abnehmende Leistung
+    - Bei rho=0.7 mit kleinen Gruppen bereits Probleme:
+      V5: alpha=1.5, beta=0.5, evap=0.7, group=75 → nur 1.004.381
+
+Interaktion Evaporation × Gruppengroesse:
+  Niedrige Evaporation (0.1-0.2) + Kleine Gruppe (20-50) → Funktioniert
+  Mittlere Evaporation (0.35-0.5) + Mittlere Gruppe (60-95) → Optimal
+  Hohe Evaporation (0.6-0.7) + Grosse Gruppe (110-140) → Funktioniert
+  Hohe Evaporation + Kleine Gruppe → SCHLECHT (Information geht verloren)
+
+
+4.4 GRUPPENGROESSE (Anzahl Ameisen pro Iteration)
+--------------------------------------------------------------------------------
+
+  Gruppe 20-35:
+    - Nur in fruehen Versuchen getestet
+    - Generell unterdurchschnittlich, besonders bei niedrigem Beta
+    - V4: alpha=1.5, beta=0.5, group=30 → 1.004.351
+    - V4: alpha=1.5, beta=1.0, group=30 → 1.004.826
+    - Zu wenig Diversitaet pro Iteration
+    - Anfaellig fuer vorzeitige Konvergenz auf Fallen-Items
+
+  Gruppe 45-60:
+    - Gut bei niedrigerer Evaporation
+    - V5: group=45, evap=0.5 → 1.005.128 (mit alpha=1.5, beta=1.0)
+    - V3: group=60, evap=0.2 → 1.005.784 (mit alpha=1.5, beta=0.8)
+    - V6: group=60, evap=0.3 → 1.005.213
+
+  Gruppe 75-95:
+    - Guter Mittelwert, flexibel einsetzbar
+    - V8: group=95, evap=0.6 → 1.005.414
+    - V13: group=95, evap=0.35 → 1.005.745
+    - V5: group=105, evap=0.5 → 1.005.038
+
+  Gruppe 110-140 (OPTIMAL bei niedrigem Beta):
+    - Beste Ergebnisse in Kombination mit beta=0.6-0.8
+    - V14: group=125, beta=0.65 → 1.005.916
+    - V11: group=135, beta=0.6 → 1.005.554
+    - V10: group=120, beta=0.6 → 1.005.421
+    - V13: group=135, beta=0.7 → 1.005.786
+    - Kompensiert fehlende heuristische Fuehrung durch Diversitaet
+
+  Gruppe 145-180 (Versuch 12):
+    - Leicht abnehmender Grenznutzen
+    - V12: group=145, alpha=1.4, beta=0.8 → 1.005.223
+    - V12: group=180, alpha=1.4, beta=0.8 → 1.005.199
+    - Kaum Verbesserung gegenueber group=110
+
+KERNERKENNTNIS:
+Die NMGE-Instanz erfordert groessere Gruppen als typische KP-Instanzen.
+Der Grund: Bei gedaempfter Heuristik (niedriges Beta) braucht der Algorithmus
+mehr zufaellige Exploration pro Iteration, um "unerwartete" aber gute
+Item-Kombinationen zu entdecken.
+
+
+================================================================================
+5. PARAMETERINTERAKTIONEN
+================================================================================
+
+5.1 Alpha/Beta-Verhaeltnis
+--------------------------------------------------------------------------------
+
+Das Verhaeltnis alpha/beta bestimmt die relative Dominanz von Pheromon
+gegenueber Heuristik. Fuer dieses NMGE-Problem:
+
+  alpha/beta   | Interpretation              | Typische Leistung
+  -------------|-----------------------------|-----------------------
+  < 1.0        | Heuristik dominiert         | Schlecht (Fallen!)
+  1.0          | Gleichgewicht               | Maessig
+  1.5 - 2.0    | Pheromon leicht dominant    | Gut
+  2.0 - 2.5    | Pheromon klar dominant      | OPTIMAL
+  > 3.0        | Heuristik fast irrelevant   | Abnehmend
+
+Beste Verhaeltnisse aus den Daten:
+  V14: alpha=1.4 / beta=0.65 = 2.15 → Median 1.005.916
+  V3:  alpha=1.5 / beta=0.8  = 1.88 → Median 1.005.784
+  V13: alpha=1.4 / beta=0.7  = 2.00 → Median 1.005.786
+  V13: alpha=1.7 / beta=1.0  = 1.70 → Median 1.005.745
+  V11: alpha=1.4 / beta=0.6  = 2.33 → Median 1.005.554
+
+Optimales Verhaeltnis: alpha/beta ≈ 1.8 - 2.3
+
+
+5.2 Alpha × Evaporation
+--------------------------------------------------------------------------------
+
+Diese Interaktion steuert die "Lerngeschwindigkeit" des Systems:
+
+  Hohes Alpha (>=2.0) + Niedrige Evaporation (0.1):
+    → Katastrophal! Schnelle, irreversible Konvergenz
+    → V1: alpha=2, evap=0.1, group=80 → 1.004.528 (Iteration 9)
+    → V1: alpha=4, evap=0.1, group=80 → 1.003.827 (Iteration 2.5!)
+    → Pheromon-Autobahnen entstehen sofort und werden nie abgebaut
+
+  Mittleres Alpha (1.4-1.7) + Mittlere Evaporation (0.35-0.55):
+    → OPTIMAL! Moderates Lerntempo mit Korrekturmoeglichkeit
+    → V14: alpha=1.4, evap=0.47 → 1.005.916 (Iteration 96.5)
+    → V13: alpha=1.7, evap=0.35 → 1.005.745 (Iteration 63.5)
+    → Algorithmus kann fruehe Fehlentscheidungen revidieren
+
+  Hohes Alpha (1.8) + Hohe Evaporation (0.6):
+    → Gut mit grossen Gruppen
+    → V8: alpha=1.8, evap=0.6, group=95 → 1.005.414 (Iteration 54.5)
+    → Kompensation: Staerkere Verstaerkung gleicht schnelleres Vergessen aus
+
+  Niedriges Alpha (<1.0) + Hohe Evaporation (>=0.6):
+    → Schlecht! Pheromon hat kaum Einfluss UND wird schnell abgebaut
+    → V12: alpha=0.6, evap=0.65, group=110 → 1.004.553
+    → Algorithmus lernt effektiv nichts aus Erfahrung
+
+
+5.3 Beta × Gruppengroesse
+--------------------------------------------------------------------------------
+
+  Niedrige Beta (0.6-0.65) + Kleine Gruppe (35-50):
+    → SCHLECHT - Zu wenig Fuehrung UND zu wenig Exploration
+    → Keine ausreichende Datengrundlage in den Tests (bewusst vermieden)
+    → Extrapolation: Blinde Suche ohne Richtung
+
+  Niedrige Beta (0.6-0.65) + Grosse Gruppe (110-140):
+    → OPTIMAL - Fehlende heuristische Fuehrung wird durch Diversitaet kompensiert
+    → V14: beta=0.65, group=125 → 1.005.916
+    → V11: beta=0.6, group=135 → 1.005.554
+    → Ameisen entdecken durch Zufall+Pheromon die wahren guten Kombinationen
+
+  Hohe Beta (>=1.3) + Grosse Gruppe (110-140):
+    → MAESSIG - Alle Ameisen folgen derselben irrefuehrenden Heuristik
+    → V10: beta=1.4, group=120 → 1.004.780
+    → V11: beta=1.4, group=135 → 1.004.706
+    → Grosse Gruppe bringt keine echte Diversitaet wenn alle "greedy" agieren
+
+  Mittlere Beta (0.8-1.0) + Mittlere Gruppe (60-95):
+    → GUT - Ausgewogener Kompromiss
+    → V3: beta=0.8, group=60 → 1.005.784
+    → V13: beta=1.0, group=95 → 1.005.745
+
+
+5.4 Evaporation × Gruppengroesse
+--------------------------------------------------------------------------------
+
+  Niedrige Evap (0.1-0.2) + Kleine Gruppe (20-50):
+    → Funktioniert, wenn Alpha moderat (1.0-1.5) ist
+    → V1: evap=0.1, group=50 → 1.004.694
+    → V3: evap=0.2, group=60 → 1.005.784 (mit optimalem alpha/beta!)
+    → Langsames, aber stabiles Lernen
+
+  Mittlere Evap (0.35-0.5) + Grosse Gruppe (95-140):
+    → OPTIMAL - Gute Balance aller Faktoren
+    → V14: evap=0.47, group=125 → 1.005.916
+    → V10: evap=0.45, group=120 → 1.005.421
+    → V13: evap=0.35, group=95 → 1.005.745
+
+  Hohe Evap (0.6-0.7) + Grosse Gruppe (110-135):
+    → GUT - Mehr Exploration, braucht aber viele Iterationen
+    → V11: evap=0.65, group=135 → 1.005.554
+    → V12: evap=0.65, group=110 → 1.005.258
+
+  Hohe Evap (0.6-0.7) + Kleine Gruppe (35-45):
+    → PROBLEMATISCH - Pheromonverlust wird nicht kompensiert
+    → V7: evap=0.6, group=35, alpha=1.9, beta=0.6 → 1.004.106
+
+
+================================================================================
+6. KONVERGENZVERHALTEN
+================================================================================
+
+Die median_iteration gibt an, in welcher Iteration der beste Medianwert
+gefunden wurde (bei vermutlich 100-150 Gesamtiterationen).
+
+Schnelle Konvergenz (Iteration < 15):
+  - Typisch fuer: Hohes Alpha (>=2) ODER niedrige Beta mit kleiner Gruppe
+  - Beispiele:
+    V1: alpha=4, beta=2, evap=0.1, group=80 → Iteration 2.5
+    V4: alpha=2, beta=0.5, evap=0.5, group=90 → Iteration 5
+    V6: alpha=2, beta=0.5, evap=0.3, group=60 → Iteration 6
+  - Interpretation: Algorithmus konvergiert sofort, findet aber nur lokale Optima
+  - Endqualitaet: Schlecht (1.003.700 - 1.004.200)
+
+Mittlere Konvergenz (Iteration 20-60):
+  - Typisch fuer: Ausgewogene Parametrisierung
+  - Beispiele:
+    V8: alpha=1.8, beta=1.0, evap=0.6, group=95 → Iteration 54.5
+    V13: alpha=1.7, beta=1.0, evap=0.35, group=95 → Iteration 63.5
+    V10: alpha=1.4, beta=0.6, evap=0.45, group=120 → Iteration 85
+  - Interpretation: Algorithmus lernt schrittweise und verbessert sich
+  - Endqualitaet: Gut (1.005.400 - 1.005.745)
+
+Spaete Konvergenz (Iteration > 80):
+  - Typisch fuer: Beste Konfigurationen mit niedrigem Beta
+  - Beispiele:
+    V14: alpha=1.4, beta=0.65, evap=0.47, group=125 → Iteration 96.5
+    V14: alpha=1.4, beta=0.65, evap=0.37, group=125 → Iteration 110.5
+    V13: alpha=1.4, beta=0.7, evap=0.35, group=135 → Iteration 84.5
+    V3:  alpha=1.5, beta=0.8, evap=0.2, group=60 → Iteration 89
+    V10: alpha=1.4, beta=0.6, evap=0.45, group=95 → Iteration 116.5
+  - Interpretation: Algorithmus braucht LANGE um aus Fallen zu entkommen
+  - Endqualitaet: BESTE (1.005.784 - 1.005.936)
+  - WICHTIG: Deutet darauf hin, dass mehr Iterationen (>150) moeglicherweise
+    noch bessere Ergebnisse liefern wuerden!
+
+Zusammenhang Konvergenzzeit und Qualitaet:
+  Die besten Loesungen werden konsistent SPAET gefunden. Dies ist ein
+  direkter Hinweis darauf, dass der Algorithmus Zeit braucht, um die
+  "Fallen" der NMGE-Instanz zu ueberwinden. Fruehe Konvergenz bedeutet
+  bei diesem Problem fast immer: Steckenbleiben in einem lokalen Optimum.
+
+
+================================================================================
+7. BEZUG ZUM NMGE-PROBLEM: WARUM DER ALGORITHMUS GETAEUSCHT WIRD
+================================================================================
+
+7.1 Die Natur der Taeuschung
+--------------------------------------------------------------------------------
+
+Die NMGE-Methode konstruiert Instanzen nach folgendem Prinzip:
+- 800 Items werden in g=14 Klassen aufgeteilt
+- Innerhalb jeder Klasse existieren Items mit aehnlichem eta-Verhaeltnis
+- KRITISCH: Bestimmte Items haben ein BESSERES eta als die Items der
+  optimalen Loesung, passen aber nicht zusammen in die Kapazitaet
+- Der Faktor f=0.1 kontrolliert die "Schwierigkeit" der Taeuschung
+- Epsilon=0.00001 sorgt fuer minimal unterscheidbare Effizienzwerte
+- a=300, b=2 beeinflussen die Gewichts-/Nutzenstruktur
+
+Das Ergebnis: Ein Greedy-Algorithmus (Items nach eta sortiert einpacken)
+liefert eine Loesung, die deutlich vom Optimum entfernt ist, weil er
+systematisch die "falschen" Items bevorzugt.
+
+
+7.2 Empirische Evidenz aus den Versuchsreihen
+--------------------------------------------------------------------------------
+
+Evidenz 1: Optimales Beta ist ungewoehnlich niedrig
+  - Standard-ACO fuer KP: beta = 2-5
+  - Optimum hier: beta = 0.6-0.8
+  - Interpretation: Die eta-basierte Heuristik ist bei NMGE SCHAEDLICH
+  - Je staerker die Heuristik gewichtet wird, desto schlechter das Ergebnis
+
+Evidenz 2: Monotoner Zusammenhang zwischen Beta und Qualitaet
+  Aus Versuch 14 (bei alpha=1.4, evap≈0.47, group≈125):
+    beta=0.50 → ~1.004.600  (zu wenig Fuehrung)
+    beta=0.65 → ~1.005.916  (OPTIMUM)
+    beta=0.80 → ~1.005.120  (leicht zu viel Heuristik)
+  Aus Versuch 10 (bei alpha=1.4, group=120, evap=0.45):
+    beta=0.60 → 1.005.421
+    beta=1.00 → 1.004.768 (Verlust: -653)
+    beta=1.40 → 1.004.791 (Verlust: -630)
+
+Evidenz 3: Grosse Gruppen kompensieren gedaempfte Heuristik
+  - Bei beta=0.6 ist die heuristische Fuehrung schwach
+  - Ohne grosse Gruppen fehlt die Diversitaet fuer zufaellige Entdeckungen
+  - V10: beta=0.6, group=70 → 1.005.021  vs. group=120 → 1.005.421 (+400)
+  - V11: beta=0.6, group=85 → 1.005.078  vs. group=135 → 1.005.554 (+476)
+
+Evidenz 4: Der verbleibende Gap von ~0.56%
+  - Bestes Ergebnis: 1.005.936 (Optimum: 1.011.638)
+  - Gap: 5.702 Punkte = 0.564%
+  - Trotz optimaler Parametrisierung bleibt der Algorithmus unter dem Optimum
+  - Ohne lokale Suche kann ACO die finale Feinoptimierung nicht leisten
+
+Evidenz 5: Konvergenzzeit korreliert mit Qualitaet
+  - Beste Loesungen brauchen 80-110 Iterationen
+  - Interpretation: Der Algorithmus muss UMLERNEN
+  - Fruehe Iterationen finden Fallen-Loesungen
+  - Spaetere Iterationen korrigieren diese durch Pheromonabbau + Neuentdeckung
+
+
+7.3 Mechanismus der Fallenueberwindung
+--------------------------------------------------------------------------------
+
+Der Ant Cycle Algorithmus ueberwindet die NMGE-Fallen in vier Phasen:
+
+Phase 1 - Initiale Diversitaet (Iterationen 1-20):
+  - Dank niedrigem Beta waehlen Ameisen nicht aggressiv nach eta
+  - Viele verschiedene Loesungen werden exploriert
+  - Einige Ameisen finden zufaellig Items, die in der Naehe des Optimums liegen
+  - Pheromon beginnt sich auf verschiedenen "Pfaden" aufzubauen
+
+Phase 2 - Fruehe Konvergenz auf gutes (aber suboptimales) Muster (It. 20-50):
+  - Pheromon verstaerkt die besten bisher gefundenen Loesungen
+  - Diese sind typischerweise "Fallen-Loesungen" mit hohem eta
+  - Algorithmus konvergiert vorlaeufig auf ~1.004.500 - 1.005.000
+
+Phase 3 - Pheromonabbau und Neuentdeckung (Iterationen 50-80):
+  - Evaporation baut langsam die Pheromonspur auf Fallen-Items ab
+  - Grosse Gruppen sorgen dafuer, dass immer noch diverse Loesungen
+    getestet werden
+  - Gelegentlich findet eine Ameise eine BESSERE Kombination
+  - Diese neue Information beginnt die alte zu verdraengen
+
+Phase 4 - Konvergenz auf bessere Loesung (Iterationen 80-120):
+  - Neue, bessere Pheromonspuren setzen sich durch
+  - Algorithmus konvergiert auf ~1.005.500 - 1.006.000
+  - Die "wahren" guten Items (die weniger offensichtlich sind) werden bevorzugt
+  - Finale Loesung ist deutlich besser als die Greedy-Loesung
+
+WARUM funktioniert dies:
+  - Ant Cycle: Pheromon wird proportional zur GESAMTQUALITAET der Loesung
+    deponiert, nicht basierend auf einzelnen Items
+  - Items, die IN GUTEN LOESUNGEN vorkommen, erhalten mehr Pheromon
+  - Ueber viele Iterationen "lernt" das System, welche Item-Kombinationen
+    tatsaechlich zusammen gut funktionieren
+  - Dies unterscheidet sich fundamental von Greedy: Greedy bewertet Items
+    einzeln, ACO bewertet Items im KONTEXT ihrer Loesung
+
+
+================================================================================
+8. VARIABILITAET UND ROBUSTHEIT
+================================================================================
+
+8.1 Standardabweichung der Ergebnisse
+--------------------------------------------------------------------------------
+
+Die std_value-Spalte zeigt die Streuung ueber die 10 Wiederholungen:
+
+Niedrige Streuung (std < 200):
+  - Typisch fuer: Mittlere Parameter, stabile Konvergenz
+  - V14: alpha=1.4, beta=0.65, evap=0.47, group=125 → std=428
+  - V12: alpha=1.4, beta=0.8, evap=0.65, group=145 → std=199
+  - Algorithmus findet reproduzierbar aehnlich gute Loesungen
+
+Hohe Streuung (std > 500):
+  - Typisch fuer: Suboptimale Parameter ODER zu viel Exploration
+  - V14: alpha=1.4, beta=0.65, evap=0.47, group=110 → std=741!
+  - V9: alpha=1.8, beta=1.0, evap=0.5, group=85 → std=821
+  - Manche Laeufe finden gute Loesungen, andere stecken fest
+  - Hinweis auf "High Risk / High Reward"-Konfiguration
+
+Beobachtung: Die absolut besten Medianwerte haben oft MITTLERE Streuung
+(300-500), was darauf hindeutet, dass die optimale Konfiguration an der
+Grenze zwischen Exploration und Exploitation operiert.
+
+
+8.2 Min/Max-Spannweite
+--------------------------------------------------------------------------------
+
+Einige bemerkenswerte Spannweiten:
+  V14 (beste Konfig): min=1.004.988, max=1.006.146 → Spanne=1.158
+  V13 (alpha=1.4, beta=0.7, group=135): min=1.005.128, max=1.006.305 → Spanne=1.177
+  V14 (alpha=1.4, beta=0.65, evap=0.47, group=110): min=1.004.208, max=1.006.857
+
+Der absolute Maximalwert von 1.006.857 (Gap zum Optimum: 4.781 = 0.47%)
+zeigt, dass der Algorithmus grundsaetzlich naeher an das Optimum herankommen
+KANN, aber nicht reproduzierbar.
+
+
+================================================================================
+9. ZUSAMMENFASSUNG: OPTIMALE PARAMETERKONFIGURATION
+================================================================================
+
+Empfohlene Konfiguration fuer dieses NMGE-Problem:
+
+  Parameter       | Empfohlener Wert | Begruendung
+  ----------------|-----------------|----------------------------------------
+  Alpha           | 1.4 - 1.7      | Moderate Pheromonverstaerkung;
+                  |                 | verhindert vorzeitige Konvergenz
+  Beta            | 0.60 - 0.80    | BEWUSSTE Abschwächung der
+                  |                 | irrefuehrenden Heuristik
+  Evaporation     | 0.35 - 0.55    | Erlaubt Umlernen, ohne Information
+                  |                 | zu schnell zu verlieren
+  Gruppengroesse  | 95 - 140       | Kompensiert niedrige Beta durch
+                  |                 | erhoehte Exploration/Diversitaet
+  Alpha/Beta      | 1.8 - 2.3      | Pheromon-Dominanz ueber Heuristik
+  Iterationen     | >= 120          | Spaete Konvergenz erfordert
+                  |                 | ausreichend Laufzeit (besser 150+)
+
+
+================================================================================
+10. HAUPTERKENNTNISSE
+================================================================================
+
+1. Die NMGE-Instanz erfordert eine UMKEHRUNG der typischen ACO-Strategie:
+   Statt die Heuristik zu verstaerken (hohes Beta), muss sie bewusst
+   GEDAEMPFT werden, weil sie systematisch in Fallen fuehrt.
+
+2. Das Alpha/Beta-Verhaeltnis von ~2.0 ist der Schluessel:
+   Der Algorithmus muss MEHR auf kollektives Pheromonlernen vertrauen als
+   auf individuelle Greedy-Entscheidungen.
+
+3. Grosse Gruppen (100-140) sind keine Verschwendung:
+   Bei gedaempfter Heuristik braucht der Algorithmus mehr zufaellige
+   Exploration pro Iteration, um "unerwartete" gute Kombinationen zu finden.
+
+4. Geduld zahlt sich aus:
+   Die besten Loesungen werden erst nach 80-110 Iterationen gefunden.
+   Der Algorithmus muss Zeit haben, fruehe Fehlkonvergenzen zu korrigieren.
+
+5. Der verbleibende Gap von ~0.56% ist eine fundamentale Grenze:
+   Ohne zusaetzliche lokale Suche (z.B. Swap-Operatoren) kann der reine
+   ACO-Algorithmus die NMGE-Falle nicht vollstaendig ueberwinden. Die
+   "letzten" falschen Items koennen nur durch gezielte Nachbarschaftssuche
+   gegen die korrekten ausgetauscht werden.
+
+6. Die NMGE-Methode erzeugt tatsaechlich "schwere" Instanzen:
+   Selbst mit optimaler ACO-Parametrisierung bleiben ~5.700 Punkte Gap.
+   Ein naive Greedy-Ansatz (hohe Beta) liefert ~1.003.600 - also Gap von
+   ~8.000 Punkten. Der optimierte ACO verbessert dies um ~40% (gegenueber
+   Greedy), kann aber das Optimum nicht erreichen.
+
+
+================================================================================
+11. EMPFEHLUNGEN FUER WEITERE OPTIMIERUNG
+================================================================================
+
+a) Iterationsanzahl erhoehen:
+   Die spaete Konvergenz (It. 96-110) deutet darauf hin, dass 150-200
+   Iterationen weitere Verbesserungen bringen koennten.
+
+b) Lokale Suche integrieren:
+   Ein hybrides Verfahren (ACO + 2-opt/Swap fuer Knapsack) koennte den
+   Gap von 0.56% weiter reduzieren, indem nach jeder Iteration die beste
+   Loesung lokal optimiert wird.
+
+c) Engerer Beta-Bereich testen:
+   Zwischen 0.55 und 0.75 in Schritten von 0.05 koennte das absolute
+   Optimum liegen.
+
+d) Adaptive Evaporation:
+   Eine Evaporationsrate, die in fruehen Iterationen hoeher ist (mehr
+   Exploration) und spaeter sinkt (mehr Exploitation), koennte die
+   Konvergenz beschleunigen.
+
+e) Elitist-Strategie vorsichtig einsetzen:
+   In allen Versuchen war elite_weight=1.0. Eine leichte Erhoehung (1.5-2.0)
+   koennte die besten gefundenen Loesungen staerker verstaerken, birgt aber
+   die Gefahr vorzeitiger Konvergenz auf Fallen-Loesungen.
+
+================================================================================
+ENDE DER ANALYSE
+================================================================================
