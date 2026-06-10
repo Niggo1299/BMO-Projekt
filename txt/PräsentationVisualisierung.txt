@@ -1,0 +1,520 @@
+================================================================================
+VISUALISIERUNGSKONZEPT - MEIN VORSCHLAG
+Analyse: Ant Cycle Algorithmus auf NMGE-Knapsack (14 Versuchsreihen)
+================================================================================
+
+UEBERGREIFENDES DESIGNKONZEPT
+================================================================================
+
+Philosophie:
+Ich wuerde die Visualisierung als "Geschichte" aufbauen, die den Leser
+Schritt fuer Schritt durch die Erkenntnisse fuehrt:
+
+  1. Ueberblick → Was ist passiert? (Verlauf der Versuchsreihen)
+  2. Einzeleffekte → Welcher Parameter zaehlt am meisten? (Main Effects)
+  3. Zusammenspiel → Wie beeinflussen sich Parameter gegenseitig? (Heatmaps)
+  4. Das Kernproblem → Warum ist Beta so kritisch? (NMGE-Fallen-Grafik)
+  5. Synthese → Was unterscheidet gute von schlechten Runs? (Radar)
+
+Gesamtlayout:
+- 5 Grafiken, die zusammen eine A3-Posterwand oder 5 Seiten im Anhang fuellen
+- Einheitlicher Stil: Dunkler Hintergrund NEIN → klassisch weiss/clean
+- Farblogik durchgehend:
+    Gruen = gut/optimal
+    Rot = schlecht/Falle
+    Blau = neutral/Daten
+    Grau = Referenz/Hintergrund
+- Schrift: Sans-serif (Arial oder Helvetica), min. 10pt
+
+
+================================================================================
+GRAFIK 1: VERLAUF DER VERSUCHSREIHEN
+================================================================================
+
+Warum zuerst:
+Der Leser soll sofort sehen, dass es einen Lernprozess gab und wie gross
+der Fortschritt war. Das motiviert die Detailanalyse.
+
+Mein Ansatz - Kombinierter Band-Linien-Plot:
+
+Oberer Bereich (75% der Hoehe):
+┌─────────────────────────────────────────────────────────────────────┐
+│                                                          Optimum ···│··· 1.011.638
+│                                                                     │
+│  1.006.000 ─                                          ●━━●          │
+│                                               ●━━●━━●/    \●       │
+│  1.005.500 ─                          ●━━━━●/                       │
+│                                  ●━━●/                              │
+│  1.005.000 ─            ●━━●━━●/                                    │
+│                    ●━━●/                                            │
+│  1.004.500 ─  ●━━●/                                                │
+│              ╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱  (Bandbreite)   │
+│  1.004.000 ─╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱                 │
+│             ╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱                │
+│  1.003.500 ─                                                        │
+│             |    |    |    |    |    |    |    |    |    |    |       │
+│             1    2    3    4    5    6    7    8    9   10   11  12-14│
+└─────────────────────────────────────────────────────────────────────┘
+
+Unterer Bereich (25% der Hoehe) - Phasenbalken:
+┌─────────────────────────────────────────────────────────────────────┐
+│  ████ EXPLORATION ████│███ BETA-FOKUS ███│██ GRUPPE+ ██│█FEINTUNING█│
+│  (V1-2)               │(V3-6)            │(V7-9)       │(V10-14)    │
+└─────────────────────────────────────────────────────────────────────┘
+
+Elemente im Detail:
+
+1. Dicke Linie (dunkelblau, 2.5pt):
+   - Bester Median-Wert pro Versuchsreihe
+   - Grosse Kreismarker an jedem Punkt
+   - Label mit exaktem Wert an Versuch 1, 3, 8, 14
+
+2. Schattiertes Band (hellblau, alpha=0.20):
+   - Untere Grenze: Schlechtester Median der Versuchsreihe
+   - Obere Grenze: Bester Median der Versuchsreihe
+   - Zeigt wie breit die getestete Bandbreite war
+
+3. Duenne gestrichelte Linie (grau):
+   - Mittelwert aller Konfigurationen pro Reihe
+   - Zeigt den "durchschnittlichen Versuch"
+
+4. Annotations (mit Pfeil, schraeg):
+   - V3: "β=0.8 entdeckt" (hier kommt der erste grosse Sprung)
+   - V10: "β=0.6, Gruppe=120"
+   - V14: "Optimum: β=0.65, G=125"
+
+5. Rechte Y-Achse:
+   - Gap zum Optimum in % (0.56% bis 0.79%)
+   - Gleiche Skala, nur andere Beschriftung
+
+6. Phasenbalken unten:
+   - 4 farbige Bloecke die zeigen, was in welcher Phase passiert ist
+   - Leichte Trennlinien zwischen den Phasen
+
+Figurgroesse: 13 x 7 Zoll
+Dateiname: "01_verlauf_versuchsreihen.png"
+
+
+================================================================================
+GRAFIK 2: MAIN EFFECTS PLOT
+================================================================================
+
+Mein Ansatz - "Beeswarm + Trend" statt nur Mittelwerte:
+
+Ich wuerde NICHT nur die gemittelten Haupteffekte zeigen (das verschleiert
+die Streuung), sondern einen hybriden Ansatz waehlen:
+
+Layout: 1 Zeile, 4 Spalten
+
+Fuer JEDEN der 4 Subplots:
+┌───────────────────┐
+│         ●         │  ← Einzelne Konfigurationen (Beeswarm/Jitter)
+│      ● ●●●●       │     Farbe: Qualitaet (gruen=gut, rot=schlecht)
+│     ●●●●●●●●      │     Groesse: Einheitlich, klein
+│    ●●●●●●●●●●     │     Transparenz: alpha=0.4
+│   ●●●●●●●●●●●●    │
+│  ━━━━━━━━━━━━━━━━  │  ← Trendlinie (LOESS, dick, schwarz)
+│                    │
+│  ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄  │  ← Gesamtmittelwert (gestrichelt, grau)
+│                    │
+│  ▓▓▓▓▓▓▓▓         │  ← Optimaler Bereich (gruene Hinterlegung)
+└───────────────────┘
+
+Subplot-Details:
+
+Subplot 1 - Alpha:
+- X-Achse: 0.5 bis 4.5
+- Trend zeigt: Anstieg bis ~1.5, dann Abfall
+- Optimaler Bereich markiert: 1.3-1.8
+
+Subplot 2 - Beta (WICHTIGSTER - etwas breiter machen!):
+- X-Achse: 0.4 bis 4.5
+- Trend zeigt: KLARER Abfall mit steigendem Beta
+- Optimaler Bereich markiert: 0.55-0.85
+- ZUSATZ: Vertikale gestrichelte Linie bei beta=2.5 mit Label
+  "Standard-KP" → zeigt wie weit das NMGE-Optimum verschoben ist
+- Dieser Subplot bekommt 30% mehr Breite als die anderen
+
+Subplot 3 - Evaporation:
+- X-Achse: 0.05 bis 0.75
+- Trend zeigt: Flaches Optimum bei 0.35-0.55
+- Optimaler Bereich markiert: 0.35-0.55
+
+Subplot 4 - Gruppengroesse:
+- X-Achse: 15 bis 185
+- Trend zeigt: Anstieg bis ~120, dann Plateau
+- Optimaler Bereich markiert: 90-140
+
+Farbkodierung der Punkte:
+- Divergierende Farbskala basierend auf dem Median-Wert
+- Schlecht (< 1.004.200): Rot
+- Mittel (1.004.200 - 1.005.200): Gelb/Orange
+- Gut (> 1.005.200): Gruen
+- So sieht man sofort: Im gruenen Bereich haeufen sich gruene Punkte
+
+Gemeinsame Y-Achse:
+- Nur links beschriftet
+- Bereich: 1.003.000 - 1.006.500
+- Horizontale Referenzlinie: Gesamtmittelwert
+
+Figurgroesse: 16 x 5 Zoll (Subplot 2 etwas breiter)
+Dateiname: "02_main_effects.png"
+
+
+================================================================================
+GRAFIK 3: INTERAKTIONS-HEATMAPS
+================================================================================
+
+Warum Heatmaps statt klassischer Interaction Plots:
+- Bei nicht-faktoriellen Designs sind Interaction Plots oft unuebersichtlich
+- Heatmaps zeigen die "Landschaft" intuitiver
+- Man sieht sofort wo das Optimum liegt
+
+Mein Ansatz - 2x3 Grid von Heatmaps:
+
+Layout:
+┌─────────────┬─────────────┬─────────────┐
+│   α × β     │   α × ρ     │   α × G     │
+│  (WICHTIG!) │             │             │
+├─────────────┼─────────────┼─────────────┤
+│   β × ρ     │   β × G     │   ρ × G     │
+│             │  (WICHTIG!) │             │
+└─────────────┴─────────────┴─────────────┘
+
+Aufbau JEDER Heatmap:
+
+- Beide Achsen: Parameterwerte (nicht kategorisiert, sondern als
+  kontinuierliche Bins)
+- Binning: Jede Achse in 6-8 gleichmaessige Bins unterteilen
+- Farbwert jeder Zelle: Mittelwert aller median_values in diesem Bin
+- Farbskala: Sequential "YlGn" (Gelb=schlecht → Dunkelgruen=gut)
+  ODER divergierend "RdYlGn" um den Mittelwert
+- Zellen mit weniger als 2 Datenpunkten: Weiss lassen (keine Daten)
+
+Zusaetzliche Elemente pro Heatmap:
+- Konturlinien (2-3 Stufen) fuer bessere Lesbarkeit
+- Stern-Symbol (★) an der Position des besten Ergebnisses
+- Weisser Kreis (○) an der Position des schlechtesten Ergebnisses
+
+Hervorhebung der wichtigsten Heatmaps:
+- α × β: Dicker Rahmen, etwas groesser
+  → Zeigt klar: Optimum bei alpha=1.4-1.5, beta=0.6-0.8
+  → "Fallen-Ecke" bei hohem Beta sichtbar rot
+- β × Gruppe: Dicker Rahmen
+  → Zeigt: Niedrige Beta braucht grosse Gruppe
+
+Figurgroesse: 14 x 9 Zoll
+Colorbar: Eine gemeinsame Colorbar rechts oder unten
+Titel: "Interaktion der ACO-Parameter (Median-Wert nach Parameterkombination)"
+Dateiname: "03_interaktions_heatmaps.png"
+
+
+================================================================================
+GRAFIK 4: NMGE-FALLEN-EFFEKT
+================================================================================
+
+Dies ist die ZENTRALE Grafik der Analyse. Sie muss die Haupterkenntnis
+auf einen Blick vermitteln: "Die Heuristik luegt bei NMGE-Problemen."
+
+Mein Ansatz - Zweigeteilte Grafik:
+
+OBERER TEIL (65% der Hoehe) - Der Scatter mit Trend:
+┌─────────────────────────────────────────────────────────────────────┐
+│ Median                                                              │
+│ 1.006.000 ─     ●●                                                 │
+│                 ●●●●●                                               │
+│ 1.005.500 ─   ●●●●●●●●                                            │
+│               ●●●●●●●●●                                            │
+│ 1.005.000 ─    ●●●●●●●●●  ●●●●                                    │
+│                  ●●●●●●●● ●●●●●●●                                  │
+│ 1.004.500 ─       ●●●     ●●●●●●●●  ●●                            │
+│                             ●●●●●●● ●●●●●                          │
+│ 1.004.000 ─                  ●●●●  ●●●●●●●  ●●                    │
+│                                      ●●●●●  ●●●●                   │
+│ 1.003.500 ─                           ●●    ●●●●  ●●              │
+│                                               ●●  ●●●             │
+│             ├────┤            ├────┤               ├────┤           │
+│             OPTIMAL         UEBERGANG            FALLE             │
+│             ▓▓▓▓▓▓            ░░░░░░              ▒▒▒▒▒▒           │
+│             |    |    |    |    |    |    |    |    |    |           │
+│            0.5  0.8  1.0  1.2  1.5  2.0  2.5  3.0  3.5  4.0  Beta │
+└─────────────────────────────────────────────────────────────────────┘
+
+Elemente Oberer Teil:
+
+1. Scatter-Punkte:
+   - ALLE Konfigurationen aus allen 14 Versuchsreihen
+   - X = Beta-Wert
+   - Y = Median-Wert
+   - Farbe: Gruppengroesse (Colormap "viridis" → dunkel=klein, hell=gross)
+   - Rand der Punkte: Schwarz (1pt) fuer bessere Sichtbarkeit
+   - Groesse: Einheitlich mittel (s=40)
+   - Transparenz: alpha=0.65
+
+2. Trendlinie:
+   - LOESS-Kurve oder Polynom 3. Grades
+   - Dicke rote Linie (3pt)
+   - Zeigt den klaren abfallenden Trend
+
+3. Konfidenzband um Trend:
+   - Hellrot, alpha=0.15
+   - Bootstrapped oder basierend auf lokaler Standardabweichung
+
+4. Vertikale Zonen (Hintergrund):
+   - Links (beta 0.5-0.85): Hellgruen, alpha=0.08
+     Label oben: "Pheromon-gefuehrt"
+   - Mitte (beta 0.85-1.5): Hellgelb, alpha=0.06
+     Label oben: "Uebergang"
+   - Rechts (beta 1.5-4.5): Hellrot, alpha=0.08
+     Label oben: "Heuristik-dominiert (FALLE)"
+
+5. Vertikale Markierung:
+   - Gestrichelte Linie bei beta=2.5
+   - Annotation mit Pfeil: "Typisches β fuer\nStandard-Knapsack"
+   - Zweite gestrichelte Linie bei beta=0.65
+   - Annotation: "Optimum fuer\nNMGE-Instanz"
+   - Doppelpfeil zwischen beiden mit Label: "Verschiebung\ndurch NMGE-Taeuschung"
+
+6. Horizontale Linien:
+   - Optimum 1.011.638: Rot gepunktet (evtl. nur als Pfeil am Rand wenn
+     zu weit weg vom Datenbereich)
+   - Bestes Ergebnis: Gruen gestrichelt
+
+UNTERER TEIL (35% der Hoehe) - Erklaerungsdiagramm:
+
+Variante die ich bevorzuge: "Konzeptuelle Gegenuberstellung"
+
+Zwei Kaesten nebeneinander mit Pfeil:
+
+┌─────────────────────────┐         ┌─────────────────────────┐
+│   STANDARD-KNAPSACK     │         │   NMGE-KNAPSACK         │
+│                         │         │                         │
+│   Bestes η-Item →       │   VS    │   Bestes η-Item →       │
+│   Gehoert zur           │  ═══►   │   GEHOERT NICHT zur     │
+│   optimalen Loesung ✓   │         │   optimalen Loesung ✗   │
+│                         │         │                         │
+│   Hohes Beta hilft ✓    │         │   Hohes Beta schadet ✗  │
+│                         │         │                         │
+│   Empfehlung: β=2-5     │         │   Empfehlung: β=0.6-0.8 │
+└─────────────────────────┘         └─────────────────────────┘
+
+- Linker Kasten: Gruener Rahmen
+- Rechter Kasten: Roter Rahmen
+- Pfeil dazwischen: "NMGE-Konstruktion kehrt die Logik um"
+
+ALTERNATIV (falls konzeptueller Kasten zu schwer programmierbar):
+Einfaches Balkendiagramm mit 3 Balken:
+
+  Balken 1: "Greedy\n(β≈4)"     → Wert ~1.003.700 → ROT
+  Balken 2: "Ausgewogen\n(β=1)" → Wert ~1.005.000 → GELB
+  Balken 3: "Gedaempft\n(β≈0.65)" → Wert ~1.005.900 → GRUEN
+
+  Ueber jedem Balken: "Gap: X.X%"
+  Y-Achse startet nicht bei 0 sondern bei 1.003.000 (um Unterschied sichtbar
+  zu machen)
+  Pfeil von Balken 1 zu 3 mit Label: "+2.200 Punkte (+0.22%)"
+
+Figurgroesse: 12 x 9 Zoll (oben 12x5.5, unten 12x3.5)
+Dateiname: "04_nmge_fallen_effekt.png"
+
+
+================================================================================
+GRAFIK 5: RADAR-CHART (Profilvergleich)
+================================================================================
+
+Mein Ansatz - Ueberlagerte Radar-Polygone mit Flaechenfuellung:
+
+Datenauswahl:
+- TOP 5: Die 5 Konfigurationen mit hoechstem median_value
+  (ueber alle 14 Versuchsreihen)
+- BOTTOM 5: Die 5 Konfigurationen mit niedrigstem median_value
+- MITTELWERT TOP: Arithmetisches Mittel der normalisierten Werte der Top 5
+- MITTELWERT BOTTOM: Arithmetisches Mittel der normalisierten Werte der Bottom 5
+
+Achsen (6 Stueck fuer mehr Aussagekraft):
+1. Alpha          → Normalisiert [0,1] ueber Gesamtrange
+2. Beta (INVERS!) → Normalisiert [0,1], ABER INVERTIERT
+                    (d.h. niedriges Beta = hoher Wert auf der Achse)
+                    BEGRUENDUNG: So zeigt "aussen = gut" fuer ALLE Achsen
+3. Evaporation    → Normalisiert [0,1]
+4. Gruppengroesse → Normalisiert [0,1]
+5. α/β-Verhaeltnis → Normalisiert [0,1]
+6. Median-Iteration → Normalisiert [0,1]
+                      (spaete Konvergenz = aussen = korreliert mit gut)
+
+WICHTIG: Durch die Invertierung von Beta zeigt der Radar einheitlich:
+"Weiter aussen = besser". Das macht die Interpretation intuitiv.
+
+Visualisierung:
+┌──────────────────────────────────────┐
+│              Alpha                    │
+│               /\                     │
+│              /  \                    │
+│    Med.It.  / ●● \   Beta(inv)      │
+│           ●/●●●●●●\●                │
+│          / ████████ \                │
+│         / ██GRUEN██  \               │
+│   α/β ●──██████████──● Evap         │
+│         \ ░░░░░░░░  /               │
+│          \ ░░ROT░░ /                │
+│           ●\░░░░░/●                  │
+│    Gruppe   \  /   (aussen=gut)     │
+│              \/                      │
+└──────────────────────────────────────┘
+
+Legende:
+  ████ = Mittleres Profil der Top-5-Konfigurationen (gruen, alpha=0.25)
+  ░░░░ = Mittleres Profil der Bottom-5-Konfigurationen (rot, alpha=0.25)
+  ●──● = Einzelne Top-5 Konfigurationen (gruene Linien, alpha=0.4)
+  ●--● = Einzelne Bottom-5 Konfigurationen (rote Linien, alpha=0.4)
+
+Farben:
+- Top-5 Flaeche: Gruen (#2ca02c), alpha=0.20, Randlinie alpha=0.8
+- Top-5 Einzellinien: Verschiedene Gruentoene, alpha=0.4, gestrichelt
+- Bottom-5 Flaeche: Rot (#d62728), alpha=0.20, Randlinie alpha=0.8
+- Bottom-5 Einzellinien: Verschiedene Rottoene, alpha=0.4, gestrichelt
+- Achsen: Dunkelgrau
+- Konzentrische Hilfslinien: Hellgrau (bei 0.25, 0.50, 0.75)
+
+Annotationen:
+- An der Beta-Achse: Kleiner Pfeil mit "invertiert: niedrig=aussen"
+- Legende-Box:
+  "Gruene Flaeche: Top 5 (Median > XXXX)"
+  "Rote Flaeche: Bottom 5 (Median < XXXX)"
+
+Erwartetes visuelles Ergebnis:
+- Gruenes Polygon: GROSS, besonders weit aussen bei Beta(inv), Gruppe, α/β
+- Rotes Polygon: KLEIN, besonders weit innen bei Beta(inv), Gruppe, α/β
+- Groesster Unterschied sichtbar bei Beta und Gruppengroesse
+- Alpha und Evaporation zeigen geringeren Unterschied
+
+Figurgroesse: 8 x 8 Zoll (quadratisch)
+Titel: "Parameterprofil: Top-5 vs. Bottom-5 Konfigurationen"
+Untertitel: "(Alle Achsen: aussen = besser | Beta invertiert)"
+Dateiname: "05_radar_profilvergleich.png"
+
+
+================================================================================
+OPTIONALE BONUS-GRAFIK 6: KONVERGENZ-SCATTER
+================================================================================
+
+Falls gewuenscht wuerde ich noch eine 6. Grafik ergaenzen:
+
+Einfacher aber aussagekraeftiger Scatter:
+- X-Achse: Median-Iteration (wann wurde die Loesung gefunden?)
+- Y-Achse: Median-Wert (wie gut ist sie?)
+- Jeder Punkt = eine Konfiguration
+- Farbe = Beta-Wert (Colormap "RdYlGn_r": rot=hohes Beta, gruen=niedriges)
+- Groesse = Gruppengroesse
+- Trendlinie: Positiver Zusammenhang (spaet gefunden = besser)
+
+Quadranten markiert:
+- Oben rechts: "IDEAL: Gut + Spaet gefunden" (wenige Punkte, alle gruen)
+- Unten links: "FALLE: Schlecht + Frueh konvergiert" (viele Punkte, alle rot)
+- Oben links: "GLUECK: Gut + Schnell" (fast leer)
+- Unten rechts: "STAGNATION: Schlecht + Lange gesucht" (wenige Punkte)
+
+Kernerkenntnis sichtbar:
+Rote Punkte (hohes Beta) clustern unten-links → schnelle Fallen-Konvergenz
+Gruene Punkte (niedriges Beta) clustern oben-rechts → spaete gute Loesungen
+
+Figurgroesse: 9 x 7 Zoll
+Dateiname: "06_konvergenz_scatter.png"
+
+
+================================================================================
+ZUSAMMENFASSUNG: REIHENFOLGE UND LOGIK
+================================================================================
+
+Praesentationsreihenfolge und was jede Grafik zeigt:
+
+Nr  Grafik                     Hauptaussage
+──  ─────────────────────────  ──────────────────────────────────────────
+1   Verlauf Versuchsreihen     "Es gab einen klaren Lernfortschritt von
+                               99.31% auf 99.43% des Optimums"
+
+2   Main Effects               "Beta ist der wichtigste Parameter, und
+                               sein Optimum liegt ungewoehnlich niedrig"
+
+3   Interaktions-Heatmaps      "Beta und Gruppengroesse kompensieren sich;
+                               Alpha und Evaporation muessen balanciert sein"
+
+4   NMGE-Fallen-Effekt         "Die Heuristik ist bei NMGE irrefuehrend -
+                               das ist die zentrale Erkenntnis"
+
+5   Radar-Profil               "Gute Konfigurationen haben ein klares Profil:
+                               niedriges Beta, grosse Gruppe, mittleres Alpha"
+
+(6) Konvergenz-Scatter         "Gute Loesungen brauchen Geduld - fruehe
+                               Konvergenz bedeutet Falle"
+
+
+================================================================================
+TECHNISCHE UMSETZUNGSHINWEISE
+================================================================================
+
+Ich wuerde alles in einem Python-Skript umsetzen mit:
+- matplotlib + seaborn als Basis
+- scipy.stats fuer LOESS/Regression
+- numpy fuer Berechnungen
+- pandas fuer Datenhandling
+
+Stilvorlage:
+  plt.rcParams Update:
+  - font.family: 'sans-serif'
+  - font.size: 11
+  - axes.titlesize: 13
+  - axes.labelsize: 11
+  - figure.facecolor: 'white'
+  - axes.facecolor: 'white'
+  - axes.grid: True
+  - grid.alpha: 0.3
+  - grid.linestyle: '--'
+
+Speicherung:
+  - Alle als PNG (300 dpi) UND PDF (Vektor)
+  - bbox_inches='tight'
+  - Einheitliche Namenskonvention: "01_...", "02_...", etc.
+
+Robustheit:
+  - Automatische Y-Achsen-Grenzen (5% Padding)
+  - Graceful handling bei leeren Bins
+  - Kommentare im Code die erklaeren WARUM etwas so dargestellt wird
+
+
+================================================================================
+WARUM GENAU DIESE 5 GRAFIKEN?
+================================================================================
+
+Ich habe mich bewusst GEGEN folgende Alternativen entschieden:
+
+NICHT Parallel Coordinates:
+  - Sieht cool aus, ist aber bei >50 Linien unlesbar
+  - Der Informationsgehalt ist geringer als Heatmap + Radar zusammen
+  - Schwer zu interpretieren fuer Nicht-Experten
+
+NICHT klassische Interaction Plots (Linien):
+  - Bei nicht-faktoriellen Designs werden die Linien unzuverlaessig
+  - Kreuzungspunkte sind schwer zu lesen wenn >2 Levels existieren
+  - Heatmaps zeigen dasselbe intuitiver
+
+NICHT Box-Plots pro Parameter:
+  - Verschleiern den kontinuierlichen Zusammenhang
+  - Main Effects mit Scatter (mein Ansatz) zeigt mehr Information
+
+NICHT 3D-Surface-Plots:
+  - Sehen beeindruckend aus, aber Informationsgehalt ist gering
+  - Perspektive verzerrt, Leser kann Werte schlecht ablesen
+  - Heatmaps sind die 2D-Projektion und viel lesbarer
+
+Die gewahlte Kombination deckt ab:
+  ✓ Zeitlicher Verlauf (Grafik 1)
+  ✓ Einzeleffekte quantifiziert (Grafik 2)
+  ✓ Paarweise Interaktionen (Grafik 3)
+  ✓ Die zentrale wissenschaftliche Erkenntnis (Grafik 4)
+  ✓ Multivariate Synthese (Grafik 5)
+
+
+================================================================================
+ENDE DES VISUALISIERUNGSKONZEPTS
+================================================================================
