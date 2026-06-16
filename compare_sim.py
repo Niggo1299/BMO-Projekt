@@ -1,15 +1,15 @@
-"""Simuliert 3 ACO-Konfigurationen und speichert Ergebnisse als JSON."""
+"""Simuliert 3 ACO-Konfigurationen (vektorisiert) und speichert Ergebnisse als JSON."""
 
 import json
 import random
 import numpy as np
 from item import Item
-from ant import Ant
+from main import construct_solutions_vectorized
 
 CONFIGS = {
-    'Beste': dict(alpha=1.40, beta=0.65, evaporation=0.37, group_size=125),
-    'Mittlere': dict(alpha=1.20, beta=2.00, evaporation=0.30, group_size=80),
-    'Schlechteste': dict(alpha=1.00, beta=4.00, evaporation=0.20, group_size=40),
+    'Beste': dict(alpha=1.33, beta=25.0, evaporation=0.35, group_size=175),
+    'Mittlere': dict(alpha=1.10, beta=8.00, evaporation=0.4, group_size=90),
+    'Schlechteste': dict(alpha=1.0, beta=2.00, evaporation=0.2, group_size=40),
 }
 
 NUM_RUNS = 10
@@ -18,7 +18,7 @@ OUTPUT_FILE = "data/compare_results.json"
 
 
 def run_simulation(config, problem_data, iterations=100, seed=42):
-    """Einzellauf des Ant-Cycle-Algorithmus."""
+    """Einzellauf mit vektorisierter Konstruktion."""
     random.seed(seed)
     np.random.seed(seed)
 
@@ -38,7 +38,11 @@ def run_simulation(config, problem_data, iterations=100, seed=42):
         item.attractiveness /= max_eta
         item.attractiveness_beta = item.attractiveness ** beta
 
-    ants = [Ant(max_load, number_items) for _ in range(group_size)]
+    # NumPy-Arrays für vektorisierte Konstruktion
+    item_weights = np.array([it.weight for it in items], dtype=np.float64)
+    item_values = np.array([it.value for it in items], dtype=np.float64)
+    attractiveness_betas = np.array([it.attractiveness_beta for it in items], dtype=np.float64)
+    pheromones = np.ones(number_items, dtype=np.float64)
 
     best_fitness_curve = []
     avg_fitness_curve = []
@@ -47,37 +51,33 @@ def run_simulation(config, problem_data, iterations=100, seed=42):
     best_backpack = None
 
     for _ in range(iterations):
-        for item in items:
-            item.score = (item.pheromone ** alpha) * item.attractiveness_beta
+        scores = (pheromones ** alpha) * attractiveness_betas
 
-        for a in ants:
-            a.construct_solution(items, alpha, beta)
+        # Vektorisierte Konstruktion
+        backpacks, current_loads, current_values = construct_solutions_vectorized(
+            group_size, item_weights, item_values, scores, max_load)
 
-        round_best_ant = max(ants, key=lambda x: x.current_value)
-        avg_value = sum(a.current_value for a in ants) / group_size
+        round_best_idx = np.argmax(current_values)
+        round_best_value = current_values[round_best_idx]
 
-        best_fitness_curve.append(round_best_ant.current_value)
-        avg_fitness_curve.append(avg_value)
-        best_weight_curve.append(round_best_ant.current_load)
+        best_fitness_curve.append(float(round_best_value))
+        avg_fitness_curve.append(float(current_values.mean()))
+        best_weight_curve.append(float(current_loads[round_best_idx]))
 
-        if round_best_ant.current_value > best_val:
-            best_val = round_best_ant.current_value
-            best_backpack = round_best_ant.backpack.copy()
+        if round_best_value > best_val:
+            best_val = round_best_value
+            best_backpack = backpacks[round_best_idx].tolist()
 
-        for item in items:
-            item.evaporate(evaporation_rate)
-        for a in ants:
-            for item in items:
-                if a.backpack[item.id] == 1:
-                    item.add_reward(a.current_value, optimal_value)
+        # Pheromonupdate (vektorisiert)
+        rewards = backpacks * (current_values[:, None] / optimal_value)
+        pheromones = pheromones * (1.0 - evaporation_rate) + rewards.sum(axis=0)
 
-    pheromone = [item.pheromone for item in items]
-    return best_fitness_curve, avg_fitness_curve, best_weight_curve, best_backpack, pheromone
+    return best_fitness_curve, avg_fitness_curve, best_weight_curve, best_backpack, pheromones.tolist()
 
 
 def main():
     print("=" * 60)
-    print(" Simulationen starten")
+    print(" Simulationen starten (vektorisiert)")
     print("=" * 60)
 
     with open("data/problem.json", "r") as f:
@@ -86,7 +86,7 @@ def main():
     results = {}
 
     for name, config in CONFIGS.items():
-        print(f"\n{name} (α={config['alpha']}, β={config['beta']}, ρ={config['evaporation']}, G={config['group_size']})")
+        print(f"\n{name} (alpha={config['alpha']}, beta={config['beta']}, evap={config['evaporation']}, G={config['group_size']})")
 
         all_best, all_avg, all_weights, all_pheromone = [], [], [], []
         best_overall_val = 0

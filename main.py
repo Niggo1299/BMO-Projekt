@@ -53,8 +53,8 @@ def construct_solutions_vectorized(group_size, item_weights, item_values, item_s
 
 def main():
     # Defaults
-    DEF = dict(group_size=125, evaporation=0.37, iterations=100,
-               alpha=1.4, beta=0.65, stagnation_limit=60)
+    DEF = dict(group_size=175, evaporation=0.35, iterations=100,
+               alpha=1.33, beta=25.0, stagnation_limit=40)
 
     parser = argparse.ArgumentParser(description="ACO für Knapsack (Ant-Cycle)")
     parser.add_argument("--group-size", type=int, default=DEF['group_size'])
@@ -64,7 +64,7 @@ def main():
     parser.add_argument("--beta", type=float, default=DEF['beta'])
     parser.add_argument("--stagnation-limit", type=int, default=DEF['stagnation_limit'])
     parser.add_argument("--no-vis", action="store_true")
-    parser.add_argument("--no-log", action="store_true")
+    parser.add_argument("--log", action="store_true")
     parser.add_argument("--log-file", type=str, default="data/results.csv")
     args = parser.parse_args()
 
@@ -75,7 +75,7 @@ def main():
     beta = args.beta
     stagnation_limit = args.stagnation_limit
     enable_vis = not args.no_vis
-    enable_log = not args.no_log
+    enable_log = args.log
     log_file = args.log_file
 
     # Problem laden
@@ -103,7 +103,7 @@ def main():
     if enable_vis:
         fig, ax1, ax2 = visualization.setup_live_plot()
 
-    print(f"=== AC: {group_size} Ameisen, {iterations} Iter, α={alpha}, β={beta}, ρ={evaporation_rate} ===\n")
+    print(f"=== AC: {group_size} Ameisen, {iterations} Iter, alpha={alpha}, beta={beta}, rho={evaporation_rate} ===\n")
 
     # Tracking
     best_fitness_per_round = []
