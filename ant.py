@@ -1,88 +1,60 @@
-"""
-Klasse Ant: Repräsentiert eine einzelne Ameise im Ameisenalgorithmus.
-
-Jede Ameise konstruiert eine Lösung, indem sie für jedes Item
-probabilistisch entscheidet, ob es eingepackt wird (1) oder nicht (0).
-
-Verwendbar für AC und EAS (kein Unterschied in der Konstruktionsphase).
-"""
+"""Ameise: Konstruiert Lösungen per probabilistischer Item-Auswahl (Ant-Cycle)."""
 
 import random
 
 
 class Ant:
     def __init__(self, max_load, num_items):
-        """
-        Initialisiert eine Ameise.
-
-        Args:
-            max_load:  Maximale Kapazität des Rucksacks.
-            num_items: Gesamtanzahl der verfügbaren Items.
-        """
         self.max_weight = max_load
         self.num_items = num_items
-        self.backpack = [0] * num_items     # Entscheidungsvektor (0 = nein, 1 = ja)
-        self.current_load = 0               # Aktuelles Gesamtgewicht im Rucksack
-        self.current_value = 0              # Aktueller Gesamtwert im Rucksack
+        self.backpack = [0] * num_items
+        self.current_load = 0
+        self.current_value = 0
 
     def reset(self):
-        """Setzt die Ameise für eine neue Iteration zurück."""
         self.backpack = [0] * self.num_items
         self.current_load = 0
         self.current_value = 0
 
-    def _exceeds_capacity(self, item):
-        """
-        Prüft, ob das Item die Kapazität überschreiten würde.
+    def construct_solution(self, items, alpha, beta):
+        """Iterative Item-Auswahl bis Rucksack voll. Nutzt vorberechnete item.score."""
+        self.reset()
 
-        Returns:
-            True wenn Item NICHT mehr passt (Kapazität würde überschritten).
-        """
-        return self.current_load + item.weight > self.max_weight
+        remaining_idx = list(range(len(items)))
+        pos_of = {idx: idx for idx in remaining_idx}
 
-    def decision(self, item, alpha, beta):
-        """
-        Probabilistische Entscheidung ob ein Item eingepackt wird.
+        while remaining_idx:
+            feasible_idx = [i for i in remaining_idx
+                            if self.current_load + items[i].weight <= self.max_weight]
+            if not feasible_idx:
+                break
 
-        Berechnung gemäß Übergangsregel (Folie 4):
-            p_ja = [τ_ja]^α · [η_ja]^β / ([τ_ja]^α · [η_ja]^β + [τ_nein]^α · [η_nein]^β)
+            weights = [items[i].score for i in feasible_idx]
+            total = sum(weights)
 
-        Auswahl erfolgt per Rouletterad-Selektion.
+            if total == 0:
+                chosen_item_idx = feasible_idx[random.randrange(len(feasible_idx))]
+            else:
+                _, chosen_item_idx = self._roulette_select(feasible_idx, weights, total)
 
-        Args:
-            item:  Das zu bewertende Item-Objekt.
-            alpha: Gewichtungsexponent für Pheromonspuren.
-            beta:  Gewichtungsexponent für heuristische Information.
-
-        Returns:
-            True wenn Item eingepackt wurde, False sonst.
-        """
-        # Kapazitätsprüfung: Falls Item nicht passt → zwingend NEIN
-        if self._exceeds_capacity(item):
-            self.backpack[item.id] = 0
-            return False
-
-        # Berechnung der gewichteten Attraktivitäten (Zähler der Formel)
-        a_yes = (item.pheromone_yes ** alpha) * (item.attractiveness_yes ** beta)
-        a_no = (item.pheromone_no ** alpha) * (item.attractiveness_no ** beta)
-
-        # Gesamtsumme (Nenner) für Wahrscheinlichkeitsberechnung
-        total = a_yes + a_no
-
-        # Schutz vor Division durch Null
-        if total == 0:
-            self.backpack[item.id] = 0
-            return False
-
-        # Wahrscheinlichkeit für JA berechnen
-        prob_yes = a_yes / total
-
-        # Stochastische Entscheidung (Rouletterad)
-        if random.random() < prob_yes:
+            item = items[chosen_item_idx]
             self.backpack[item.id] = 1
             self.current_load += item.weight
             self.current_value += item.value
-            return True
-        else:
-            self.backpack[item.id] = 0
-            return False
+
+            # O(1) Swap-and-Pop
+            pos = pos_of[chosen_item_idx]
+            last = remaining_idx[-1]
+            remaining_idx[pos] = last
+            pos_of[last] = pos
+            remaining_idx.pop()
+            del pos_of[chosen_item_idx]
+
+    def _roulette_select(self, feasible_idx, weights, total):
+        threshold = random.random() * total
+        cumulative = 0.0
+        for list_pos, (item_idx, w) in enumerate(zip(feasible_idx, weights)):
+            cumulative += w
+            if cumulative >= threshold:
+                return list_pos, item_idx
+        return len(feasible_idx) - 1, feasible_idx[-1]

@@ -1,95 +1,84 @@
-"""
-Hauptprogramm: Ameisenalgorithmus für das 0/1-Rucksackproblem.
-
-Unterstützte Varianten:
-- Ant-Cycle (AC):    Folie 7 – alle Ameisen legen Pheromone ab
-- Elitäres AS (EAS): Folie 9 – zusätzlicher Elite-Bonus (best-so-far)
-
-Aufruf:
-    python main.py              → Standardeinstellungen (siehe unten)
-    python main.py AC           → Ant-Cycle
-    python main.py EAS          → Elitäres Ameisen-System
-
-Parameter-Überschreibung via Kommandozeile (z.B. für Optimizer):
-    python main.py EAS --alpha 2.0 --beta 1.5 --no-vis --log-file results.csv
-"""
+"""Ameisenalgorithmus (Ant-Cycle) für das 0/1-Rucksackproblem."""
 
 import os
 import csv
-import random
 import json
 import argparse
+import numpy as np
 from ant import Ant
 from item import Item
 import visualization
 
 
+def construct_solutions_vectorized(group_size, item_weights, item_values, item_scores, max_load):
+    """Vektorisierte Lösungskonstruktion für alle Ameisen parallel."""
+    num_items = len(item_weights)
+    backpacks = np.zeros((group_size, num_items), dtype=np.int8)
+    current_loads = np.zeros(group_size, dtype=np.float64)
+    current_values = np.zeros(group_size, dtype=np.float64)
+    active = np.ones(group_size, dtype=bool)
+
+    while np.any(active):
+        active_idx = np.where(active)[0]
+
+        feasible_active = ((backpacks[active_idx] == 0) &
+                           (item_weights[None, :] <= (max_load - current_loads[active_idx])[:, None]))
+
+        has_feasible = np.any(feasible_active, axis=1)
+        if not np.all(has_feasible):
+            active[active_idx[~has_feasible]] = False
+            active_idx = np.where(active)[0]
+            feasible_active = feasible_active[has_feasible]
+            if len(active_idx) == 0:
+                break
+
+        ant_weights = item_scores[None, :] * feasible_active
+        sum_weights = ant_weights.sum(axis=1)
+
+        zero_sum_mask = (sum_weights == 0)
+        if np.any(zero_sum_mask):
+            ant_weights[zero_sum_mask] = feasible_active[zero_sum_mask].astype(np.float64)
+            sum_weights = ant_weights.sum(axis=1)
+
+        cumsum_weights = np.cumsum(ant_weights, axis=1)
+        r = np.random.rand(len(active_idx), 1) * sum_weights[:, None]
+        chosen = (cumsum_weights >= r).argmax(axis=1)
+
+        backpacks[active_idx, chosen] = 1
+        current_loads[active_idx] += item_weights[chosen]
+        current_values[active_idx] += item_values[chosen]
+
+    return backpacks, current_loads, current_values
+
+
 def main():
-    # ===================== STANDARDEINSTELLUNGEN =====================
-    DEF_MODE = "AC"
-    DEF_GROUP_SIZE = 125
-    DEF_EVAPORATION = 0.37
-    DEF_ITERATIONS = 100
-    DEF_ALPHA = 1.4
-    DEF_BETA = 0.65
-    DEF_ELITE_WEIGHT = 1.0
-    DEF_STAGNATION_LIMIT = 60
-    DEF_VISUALIZATION = True
-    DEF_LOGGING = False
-    DEF_LOG_FILE = "data/results.csv"
+    # Defaults
+    DEF = dict(group_size=125, evaporation=0.37, iterations=100,
+               alpha=1.4, beta=0.65, stagnation_limit=60)
 
-    # ===================== KOMMANDOZEILEN-PARSER =====================
-    parser = argparse.ArgumentParser(description="Ameisenalgorithmus (AC/EAS)")
-    parser.add_argument("mode", nargs="?", default=DEF_MODE,
-                        help="Variante: AC oder EAS (Standard: AC)")
-    parser.add_argument("--group-size", type=int, default=DEF_GROUP_SIZE,
-                        help="Anzahl Ameisen pro Iteration")
-    parser.add_argument("--evaporation", type=float, default=DEF_EVAPORATION,
-                        help="Verdunstungsfaktor ρ")
-    parser.add_argument("--iterations", type=int, default=DEF_ITERATIONS,
-                        help="Anzahl Iterationen")
-    parser.add_argument("--alpha", type=float, default=DEF_ALPHA,
-                        help="Pheromon-Gewichtung α")
-    parser.add_argument("--beta", type=float, default=DEF_BETA,
-                        help="Heuristik-Gewichtung β")
-    parser.add_argument("--elite-weight", type=float, default=DEF_ELITE_WEIGHT,
-                        help="Elite-Faktor e (nur EAS, Folie 9: 0 ≤ e ≤ 1)")
-    parser.add_argument("--stagnation-limit", type=int, default=DEF_STAGNATION_LIMIT,
-                        help="Abbruch nach N Iterationen ohne Verbesserung (0=deaktiviert)")
-    parser.add_argument("--no-vis", action="store_true",
-                        help="Live-Plot deaktivieren")
-    parser.add_argument("--no-log", action="store_true",
-                        help="CSV-Logging deaktivieren")
-    parser.add_argument("--log-file", type=str, default=DEF_LOG_FILE,
-                        help="Pfad zur Log-Datei")
-
+    parser = argparse.ArgumentParser(description="ACO für Knapsack (Ant-Cycle)")
+    parser.add_argument("--group-size", type=int, default=DEF['group_size'])
+    parser.add_argument("--evaporation", type=float, default=DEF['evaporation'])
+    parser.add_argument("--iterations", type=int, default=DEF['iterations'])
+    parser.add_argument("--alpha", type=float, default=DEF['alpha'])
+    parser.add_argument("--beta", type=float, default=DEF['beta'])
+    parser.add_argument("--stagnation-limit", type=int, default=DEF['stagnation_limit'])
+    parser.add_argument("--no-vis", action="store_true")
+    parser.add_argument("--no-log", action="store_true")
+    parser.add_argument("--log-file", type=str, default="data/results.csv")
     args = parser.parse_args()
 
-    # ===================== PARAMETER ZUWEISEN =====================
-    mode = args.mode.upper()
     group_size = args.group_size
     evaporation_rate = args.evaporation
     iterations = args.iterations
     alpha = args.alpha
     beta = args.beta
-    elite_weight = args.elite_weight
     stagnation_limit = args.stagnation_limit
-
-    enable_visualization = False if args.no_vis else DEF_VISUALIZATION
-    enable_logging = False if args.no_log else DEF_LOGGING
+    enable_vis = not args.no_vis
+    enable_log = not args.no_log
     log_file = args.log_file
 
-    # ===================== TRACKING =====================
-    best_fitness_per_round = []
-    avg_fitness_per_round = []
-
-    global_best_value = -1
-    global_best_backpack = []
-    global_best_weight = 0
-    global_best_iteration = -1
-    stagnation_counter = 0
-
-    # ===================== PROBLEM LADEN =====================
+    # Problem laden
     with open("data/problem.json", "r") as f:
         problem_data = json.load(f)
 
@@ -97,126 +86,89 @@ def main():
     max_load = problem_data["max_load"]
     optimal_value = problem_data["optimal_solution"]["value"]
 
-    items = []
-    for data in problem_data["items"]:
-        items.append(Item(data["id"], data["weight"], data["value"]))
+    items = [Item(d["id"], d["weight"], d["value"]) for d in problem_data["items"]]
 
-    # Heuristik-Werte (eta) normieren: Teilen durch das Maximum im aktuellen Problem
-    max_eta_yes = max(item.attractiveness_yes for item in items)
-    max_eta_no = max(item.attractiveness_no for item in items)
-
+    # Heuristik normieren + Beta-Potenz vorberechnen
+    max_eta = max(item.attractiveness for item in items)
     for item in items:
-        item.attractiveness_yes /= max_eta_yes
-        item.attractiveness_no /= max_eta_no
-        
-        # Heuristik-Potenzen vorab berechnen (beschleunigt die Ameisen-Entscheidungen um Faktor 3)
-        item.attractiveness_yes_beta = item.attractiveness_yes ** beta
-        item.attractiveness_no_beta = item.attractiveness_no ** beta
+        item.attractiveness /= max_eta
+        item.attractiveness_beta = item.attractiveness ** beta
 
-    # ===================== AMEISEN ERZEUGEN =====================
-    ants = [Ant(max_load, number_items) for _ in range(group_size)]
+    # NumPy-Arrays
+    item_weights = np.array([it.weight for it in items], dtype=np.float64)
+    item_values = np.array([it.value for it in items], dtype=np.float64)
+    attractiveness_betas = np.array([it.attractiveness_beta for it in items], dtype=np.float64)
+    pheromones = np.ones(number_items, dtype=np.float64)
 
-    # ===================== VISUALISIERUNG SETUP =====================
-    if enable_visualization:
+    if enable_vis:
         fig, ax1, ax2 = visualization.setup_live_plot()
 
-    # ===================== INFO-AUSGABE =====================
-    print(f"=== Modus: {mode} ===")
-    if mode == "EAS":
-        print(f"    Elite-Gewicht e = {elite_weight}")
-    print(f"    {group_size} Ameisen, {iterations} Iterationen")
-    print(f"    alpha={alpha}, beta={beta}, rho={evaporation_rate}")
-    if stagnation_limit > 0:
-        print(f"    Stagnationslimit: {stagnation_limit} Iterationen")
-    print()
+    print(f"=== AC: {group_size} Ameisen, {iterations} Iter, α={alpha}, β={beta}, ρ={evaporation_rate} ===\n")
 
-    # ===================== HAUPTSCHLEIFE =====================
+    # Tracking
+    best_fitness_per_round = []
+    avg_fitness_per_round = []
+    global_best_value = -1
+    global_best_backpack = []
+    global_best_weight = 0
+    global_best_iteration = -1
+    stagnation_counter = 0
+
+    # Hauptschleife
     for iteration in range(iterations):
+        scores = (pheromones ** alpha) * attractiveness_betas
 
-        # --- Phase 1: Lösungskonstruktion durch alle Ameisen ---
-        for a in ants:
-            starting_position = random.randint(0, number_items - 1)
-            a.reset()
+        backpacks, current_loads, current_values = construct_solutions_vectorized(
+            group_size, item_weights, item_values, scores, max_load)
 
-            for position in range(number_items):
-                current_item = items[(starting_position + position) % number_items]
-                a.decision(current_item, alpha, beta)
+        round_best_idx = np.argmax(current_values)
+        round_best_value = current_values[round_best_idx]
 
-        # --- Phase 2: Auswertung ---
-        round_best_ant = max(ants, key=lambda x: x.current_value)
-
-        # All-Time-Best aktualisieren
-        if round_best_ant.current_value > global_best_value:
-            global_best_value = round_best_ant.current_value
-            global_best_backpack = list(round_best_ant.backpack)
-            global_best_weight = round_best_ant.current_load
+        if round_best_value > global_best_value:
+            global_best_value = round_best_value
+            global_best_backpack = backpacks[round_best_idx].tolist()
+            global_best_weight = current_loads[round_best_idx]
             global_best_iteration = iteration + 1
             stagnation_counter = 0
         else:
             stagnation_counter += 1
 
-        # Lernkurven-Daten speichern
-        avg_value = sum(a.current_value for a in ants) / group_size
-        best_fitness_per_round.append(round_best_ant.current_value)
-        avg_fitness_per_round.append(avg_value)
+        best_fitness_per_round.append(round_best_value)
+        avg_fitness_per_round.append(current_values.mean())
 
-        # Frühes Abbrechen bei Stagnation
         if stagnation_limit > 0 and stagnation_counter >= stagnation_limit:
-            print(f"Abbruch: Keine Verbesserung seit {stagnation_limit} Iterationen "
-                  f"(Iteration {iteration + 1})")
+            print(f"Stagnation nach {iteration + 1} Iterationen.")
             break
 
-        # --- Phase 3: Pheromonupdate ---
-        # Schritt 3a: Verdampfung → (1-ρ)·τ
-        for current_item in items:
-            current_item.evaporate(evaporation_rate)
+        # Pheromonupdate
+        rewards = backpacks * (current_values[:, None] / optimal_value)
+        pheromones = pheromones * (1.0 - evaporation_rate) + rewards.sum(axis=0)
 
-        # Schritt 3b: Pheromonablage ALLER Ameisen → Σ Δk
-        for a in ants:
-            for current_item in items:
-                decision = a.backpack[current_item.id]
-                current_item.add_reward(decision, a.current_value, optimal_value)
-
-        # Schritt 3c: Elitärer Bonus – NUR bei EAS (Folie 9)
-        if mode == "EAS" and global_best_value > 0:
-            for current_item in items:
-                decision = global_best_backpack[current_item.id]
-                current_item.add_reward(decision, global_best_value, optimal_value,
-                                        elite_factor=elite_weight)
-
-        # --- Visualisierung aktualisieren ---
-        if enable_visualization:
+        if enable_vis:
+            for j, item in enumerate(items):
+                item.pheromone = float(pheromones[j])
             visualization.update_live_plot(
                 fig, ax1, ax2, items, iteration + 1,
-                number_items, best_fitness_per_round, avg_fitness_per_round, mode
-            )
+                number_items, best_fitness_per_round, avg_fitness_per_round, "AC")
 
-    # ===================== ERGEBNIS =====================
-    print(f"\n=== OPTIMIERUNG ABGESCHLOSSEN ({mode}) ===")
-    print(f"Bester Rucksack-Wert: {global_best_value} (Iteration {global_best_iteration})")
-    print(f"Benutztes Gewicht:    {global_best_weight} / {max_load}")
-    print(f"Rucksack-Belegung:    {global_best_backpack}")
+    # Ergebnis
+    print(f"\nBester Wert: {global_best_value} (Iter {global_best_iteration})")
+    print(f"Gewicht: {global_best_weight} / {max_load}")
 
-    if enable_visualization:
+    if enable_vis:
         visualization.show_final()
 
-    # ===================== CSV-PROTOKOLLIERUNG =====================
-    if enable_logging:
+    if enable_log:
         file_exists = os.path.isfile(log_file)
         with open(log_file, "a", newline="") as f:
             writer = csv.writer(f, delimiter=';')
             if not file_exists:
-                writer.writerow([
-                    "mode", "alpha", "beta", "evaporation", "group_size",
-                    "elite_weight", "best_value", "best_iteration"
-                ])
-            writer.writerow([
-                mode, alpha, beta, evaporation_rate, group_size,
-                elite_weight, global_best_value, global_best_iteration
-            ])
+                writer.writerow(["alpha", "beta", "evaporation", "group_size",
+                                 "best_value", "best_iteration"])
+            writer.writerow([alpha, beta, evaporation_rate, group_size,
+                             global_best_value, global_best_iteration])
 
-    # Ergebnis-Ausgabe in standardisiertem Format für externe Skripte (z. B. Optimizer)
-    print(f"RESULT:{mode};{alpha};{beta};{evaporation_rate};{group_size};{elite_weight};{global_best_value};{global_best_iteration}")
+    print(f"RESULT:AC;{alpha};{beta};{evaporation_rate};{group_size};{global_best_value};{global_best_iteration}")
 
 
 if __name__ == "__main__":
