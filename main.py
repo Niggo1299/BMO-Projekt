@@ -27,15 +27,15 @@ import visualization
 def main():
     # ===================== STANDARDEINSTELLUNGEN =====================
     DEF_MODE = "AC"
-    DEF_GROUP_SIZE = 126
-    DEF_EVAPORATION = 0.4726
-    DEF_ITERATIONS = 200
-    DEF_ALPHA = 1.4043
-    DEF_BETA = 0.6454
+    DEF_GROUP_SIZE = 125
+    DEF_EVAPORATION = 0.37
+    DEF_ITERATIONS = 100
+    DEF_ALPHA = 1.4
+    DEF_BETA = 0.65
     DEF_ELITE_WEIGHT = 1.0
     DEF_STAGNATION_LIMIT = 60
-    DEF_VISUALIZATION = False
-    DEF_LOGGING = True
+    DEF_VISUALIZATION = True
+    DEF_LOGGING = False
     DEF_LOG_FILE = "data/results.csv"
 
     # ===================== KOMMANDOZEILEN-PARSER =====================
