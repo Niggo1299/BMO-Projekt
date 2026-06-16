@@ -94,7 +94,12 @@ def main():
     ax.set_title("Konvergenzverlauf des Kofferwerts", fontweight='bold')
     ax.set_xlabel("Iteration")
     ax.set_ylabel("Rucksackwert")
-    ax.set_ylim(1_000_000, 1_015_000)
+    # Achsengrenzen dynamisch berechnen mit 5% Padding
+    all_vals = [val for name in names for val in results[name]['best_curve']] + [optimal_value]
+    min_val, max_val = min(all_vals), max(all_vals)
+    span = max_val - min_val
+    padding = max(span * 0.05, 500)
+    ax.set_ylim(min_val - padding, max_val + padding)
     ax.legend(loc='upper left', bbox_to_anchor=(1.02, 1.0), frameon=True)
     plt.tight_layout(rect=[0, 0, 0.72, 1])
     save_fig(fig, "07b_vergleich_nutzwert")
