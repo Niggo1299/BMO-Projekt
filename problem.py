@@ -5,15 +5,16 @@ import json
 import math
 import sys
 import time
+import os
 
 
 DIFFICULTY_CONFIGS = {
-    "easy": dict(n=400, c=1_000_000, g=2, f=0.2, epsilon=0.1, s=100, b=2, seed=1,
-                 filename="data/problem.json"),
+    "easy": dict(n=400, c=1_000_000, g=4, f=0.3, epsilon=0.1, s=10000, b=2, seed=1,
+                 filename="data/easy/problem.json"),
     "medium": dict(n=600, c=1_000_000, g=10, f=0.2, epsilon=0.001, s=200, b=2, seed=2,
-                   filename="data/problem.json"),
-    "hard": dict(n=800, c=1_000_000, g=14, f=0.1, epsilon=0.00001, s=300, b=2, seed=3,
-                 filename="data/problem.json"),
+                   filename="data/medium/problem.json"),
+    "hard": dict(n=800, c=1_000_000, g=14, f=0.1, epsilon=0.00001, s=100, b=2, seed=3,
+                 filename="data/hard/problem.json"),
 }
 
 
@@ -92,6 +93,7 @@ def generate_problem(n, c, g, f, epsilon, s, b, filename, seed):
                             "gap_percent": round(greedy_gap, 2)},
     }
 
+    os.makedirs(os.path.dirname(filename), exist_ok=True)
     with open(filename, "w") as fh:
         json.dump(problem, fh, indent=4)
 

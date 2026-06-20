@@ -66,6 +66,7 @@ def main():
     parser.add_argument("--no-vis", action="store_true")
     parser.add_argument("--log", action="store_true")
     parser.add_argument("--log-file", type=str, default="data/results.csv")
+    parser.add_argument("--problem", type=str, default="data/problem.json", help="Pfad zur problem.json")
     args = parser.parse_args()
 
     group_size = args.group_size
@@ -77,9 +78,10 @@ def main():
     enable_vis = not args.no_vis
     enable_log = args.log
     log_file = args.log_file
+    problem_file = args.problem
 
     # Problem laden
-    with open("data/problem.json", "r") as f:
+    with open(problem_file, "r") as f:
         problem_data = json.load(f)
 
     number_items = problem_data["number_items"]

@@ -9,7 +9,7 @@ from main import construct_solutions_vectorized
 CONFIGS = {
     'Beste': dict(alpha=1.33, beta=25.0, evaporation=0.35, group_size=175),
     'Mittlere': dict(alpha=1.10, beta=8.00, evaporation=0.4, group_size=90),
-    'Schlechteste': dict(alpha=1.0, beta=2.00, evaporation=0.2, group_size=40),
+    'Schlechteste': dict(alpha=1.0, beta=4.00, evaporation=0.2, group_size=40),
 }
 
 NUM_RUNS = 10
@@ -76,51 +76,68 @@ def run_simulation(config, problem_data, iterations=100, seed=42):
 
 
 def main():
-    print("=" * 60)
-    print(" Simulationen starten (vektorisiert)")
-    print("=" * 60)
-
-    with open("data/problem.json", "r") as f:
-        problem_data = json.load(f)
-
-    results = {}
-
-    for name, config in CONFIGS.items():
-        print(f"\n{name} (alpha={config['alpha']}, beta={config['beta']}, evap={config['evaporation']}, G={config['group_size']})")
-
-        all_best, all_avg, all_weights, all_pheromone = [], [], [], []
-        best_overall_val = 0
-        best_overall_backpack = None
-
-        for run in range(NUM_RUNS):
-            seed = 100 + run * 37
-            best_c, avg_c, weight_c, bp, phe = run_simulation(config, problem_data, ITERATIONS, seed)
-
-            all_best.append(best_c)
-            all_avg.append(avg_c)
-            all_weights.append(weight_c)
-            all_pheromone.append(phe)
-
-            run_max = max(best_c)
-            if run_max > best_overall_val:
-                best_overall_val = run_max
-                best_overall_backpack = bp
-
-            print(f"  Lauf {run+1}/{NUM_RUNS}: {best_c[-1]:,.0f}".replace(",", "."))
-
-        results[name] = {
-            'config': config,
-            'best_curve': np.mean(all_best, axis=0).tolist(),
-            'avg_curve': np.mean(all_avg, axis=0).tolist(),
-            'weight_curve': np.mean(all_weights, axis=0).tolist(),
-            'best_backpack': best_overall_backpack,
-            'pheromone': np.mean(all_pheromone, axis=0).tolist(),
-        }
-
-    with open(OUTPUT_FILE, "w") as f:
-        json.dump(results, f)
-
-    print(f"\nErgebnisse gespeichert: {OUTPUT_FILE}")
+    import sys
+    import os
+    
+    diffs = ["easy", "medium", "hard"]
+    if len(sys.argv) > 1:
+        choice = sys.argv[1].lower()
+        if choice not in diffs:
+            print(f"Ungueltig: '{choice}'. Erlaubt: {', '.join(diffs)}")
+            sys.exit(1)
+        diffs = [choice]
+        
+    for diff in diffs:
+        print("=" * 60)
+        print(f" Simulationen fuer {diff.upper()} starten")
+        print("=" * 60)
+        prob_file = f"data/{diff}/problem.json"
+        out_file = f"data/{diff}/compare_results.json"
+        
+        if not os.path.exists(prob_file):
+            print(f"Fehler: Datei '{prob_file}' existiert nicht. Bitte zuerst problem.py ausfuehren.")
+            continue
+            
+        with open(prob_file, "r") as f:
+            problem_data = json.load(f)
+            
+        results = {}
+        for name, config in CONFIGS.items():
+            print(f"\n{name} (alpha={config['alpha']}, beta={config['beta']}, evap={config['evaporation']}, G={config['group_size']})")
+            
+            all_best, all_avg, all_weights, all_pheromone = [], [], [], []
+            best_overall_val = 0
+            best_overall_backpack = None
+            
+            for run in range(NUM_RUNS):
+                seed = 100 + run * 37
+                best_c, avg_c, weight_c, bp, phe = run_simulation(config, problem_data, ITERATIONS, seed)
+                
+                all_best.append(best_c)
+                all_avg.append(avg_c)
+                all_weights.append(weight_c)
+                all_pheromone.append(phe)
+                
+                run_max = max(best_c)
+                if run_max > best_overall_val:
+                    best_overall_val = run_max
+                    best_overall_backpack = bp
+                    
+                print(f"  Lauf {run+1}/{NUM_RUNS}: {best_c[-1]:,.0f}".replace(",", "."))
+                
+            results[name] = {
+                'config': config,
+                'best_curve': np.mean(all_best, axis=0).tolist(),
+                'avg_curve': np.mean(all_avg, axis=0).tolist(),
+                'weight_curve': np.mean(all_weights, axis=0).tolist(),
+                'best_backpack': best_overall_backpack,
+                'pheromone': np.mean(all_pheromone, axis=0).tolist(),
+            }
+            
+        os.makedirs(os.path.dirname(out_file), exist_ok=True)
+        with open(out_file, "w") as f:
+            json.dump(results, f)
+        print(f"\nErgebnisse gespeichert: {out_file}\n")
 
 
 if __name__ == '__main__':

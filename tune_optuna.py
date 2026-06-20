@@ -3,6 +3,7 @@
 import argparse
 import subprocess
 import sys
+import os
 import numpy as np
 import optuna
 import optuna.visualization.matplotlib as vis
@@ -11,13 +12,13 @@ import matplotlib.pyplot as plt
 optuna.logging.set_verbosity(optuna.logging.WARNING)
 
 
-def run_aco_instance(alpha, beta, evap, group_size):
+def run_aco_instance(alpha, beta, evap, group_size, problem_file):
     cmd = [
         sys.executable, "main.py",
         "--alpha", f"{alpha:.4f}", "--beta", f"{beta:.4f}",
         "--evaporation", f"{evap:.4f}", "--group-size", str(int(group_size)),
         "--iterations", "100", "--stagnation-limit", "40",
-        "--no-vis"
+        "--no-vis", "--problem", problem_file
     ]
     res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
     for line in res.stdout.splitlines():
@@ -26,15 +27,15 @@ def run_aco_instance(alpha, beta, evap, group_size):
     return 0.0
 
 
-def make_objective(repeats):
+def make_objective(repeats, problem_file):
     def objective(trial):
         # Definition des optimierten Suchraums (dritter Durchlauf)
         alpha = trial.suggest_float("alpha", 0.9, 1.6)
-        beta = trial.suggest_float("beta", 12.0, 25.0)
+        beta = trial.suggest_float("beta", 12.0, 30.0)
         evap = trial.suggest_float("evaporation", 0.25, 0.55)
         group_size = trial.suggest_int("group_size", 130, 200)
 
-        results = [run_aco_instance(alpha, beta, evap, group_size) for _ in range(repeats)]
+        results = [run_aco_instance(alpha, beta, evap, group_size, problem_file) for _ in range(repeats)]
         return np.median(results)
 
     return objective
@@ -45,11 +46,22 @@ def main():
     parser.add_argument("--trials", type=int, default=100)
     parser.add_argument("--repeats", type=int, default=3)
     parser.add_argument("--jobs", type=int, default=8, help="Anzahl paralleler CPU-Kerne")
+    parser.add_argument("--problem", type=str, default="data/medium/problem.json", help="Pfad zur problem.json")
     args = parser.parse_args()
 
-    print(f"Optuna-Tuning: {args.trials} Trials × {args.repeats} Repeats auf {args.jobs} Kernen\n")
+    print(f"Optuna-Tuning: {args.trials} Trials × {args.repeats} Repeats auf {args.jobs} Kernen")
+    print(f"Problem-Datei: {args.problem}\n")
 
-    study = optuna.create_study(direction="maximize")
+    os.makedirs("data", exist_ok=True)
+    db_file = "data/optuna_study.db"
+
+    # SQLite-Datenbank zur Persistenz (ermöglicht das Fortsetzen und Laden der Trials)
+    study = optuna.create_study(
+        study_name="aco_tuning",
+        storage=f"sqlite:///{db_file}",
+        load_if_exists=True,
+        direction="maximize"
+    )
 
     def callback(study, trial):
         p = trial.params
@@ -57,7 +69,8 @@ def main():
               f"alpha={p['alpha']:.3f} beta={p['beta']:.3f} evap={p['evaporation']:.3f} G={int(p['group_size'])} | "
               f"Best: {study.best_value:.1f}")
 
-    study.optimize(make_objective(args.repeats), n_trials=args.trials, n_jobs=args.jobs, callbacks=[callback])
+    if args.trials > 0:
+        study.optimize(make_objective(args.repeats, args.problem), n_trials=args.trials, n_jobs=args.jobs, callbacks=[callback])
 
     print(f"\nBestes Ergebnis: {study.best_value:.1f}")
     for k, v in study.best_params.items():
@@ -76,7 +89,18 @@ def main():
         fig.set_size_inches(12, 10)
         plt.savefig("data/optuna_contour.png", dpi=300, bbox_inches="tight")
         plt.close()
-        print("Grafiken erfolgreich gespeichert unter 'data/optuna_importances.png' und 'data/optuna_contour.png'")
+
+        # 3. Spezifische Wechselwirkung zwischen Alpha und Beta plotten
+        vis.plot_contour(study, params=["alpha", "beta"])
+        fig = plt.gcf()
+        fig.set_size_inches(7, 6)
+        plt.savefig("data/optuna_contour_alpha_beta.png", dpi=300, bbox_inches="tight")
+        plt.close()
+
+        print("Grafiken erfolgreich gespeichert unter:\n"
+              "  - 'data/optuna_importances.png'\n"
+              "  - 'data/optuna_contour.png'\n"
+              "  - 'data/optuna_contour_alpha_beta.png'")
     except Exception as e:
         print(f"Fehler beim Erzeugen der Grafiken: {e}")
 
