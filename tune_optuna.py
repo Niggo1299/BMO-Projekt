@@ -49,15 +49,28 @@ def main():
     parser.add_argument("--problem", type=str, default="data/medium/problem.json", help="Pfad zur problem.json")
     args = parser.parse_args()
 
-    print(f"Optuna-Tuning: {args.trials} Trials × {args.repeats} Repeats auf {args.jobs} Kernen")
+    # Schwierigkeitsgrad aus dem Pfad ableiten
+    path_parts = args.problem.replace("\\", "/").split("/")
+    if len(path_parts) >= 2 and path_parts[-2] in ["easy", "medium", "hard"]:
+        diff = path_parts[-2]
+    else:
+        diff = "custom"
+
+    print(f"Optuna-Tuning ({diff.upper()}): {args.trials} Trials × {args.repeats} Repeats auf {args.jobs} Kernen")
     print(f"Problem-Datei: {args.problem}\n")
 
-    os.makedirs("data", exist_ok=True)
-    db_file = "data/optuna_study.db"
+    # Automatische Migration der alten globalen Datenbank zu 'medium'
+    os.makedirs(f"data/{diff}", exist_ok=True)
+    if diff == "medium" and os.path.exists("data/optuna_study.db") and not os.path.exists("data/medium/optuna_study.db"):
+        print("Bestehende Optuna-Datenbank wird in den Ordner 'data/medium/' verschoben...")
+        os.rename("data/optuna_study.db", "data/medium/optuna_study.db")
+
+    db_file = f"data/{diff}/optuna_study.db"
+    study_name = "aco_tuning"
 
     # SQLite-Datenbank zur Persistenz (ermöglicht das Fortsetzen und Laden der Trials)
     study = optuna.create_study(
-        study_name="aco_tuning",
+        study_name=study_name,
         storage=f"sqlite:///{db_file}",
         load_if_exists=True,
         direction="maximize"
@@ -72,7 +85,7 @@ def main():
     if args.trials > 0:
         study.optimize(make_objective(args.repeats, args.problem), n_trials=args.trials, n_jobs=args.jobs, callbacks=[callback])
 
-    print(f"\nBestes Ergebnis: {study.best_value:.1f}")
+    print(f"\nBestes Ergebnis ({diff.upper()}): {study.best_value:.1f}")
     for k, v in study.best_params.items():
         print(f"  {k}: {v:.4f}")
 
@@ -80,27 +93,27 @@ def main():
     try:
         # 1. Haupteffekte (Wichtigkeit) plotten
         vis.plot_param_importances(study)
-        plt.savefig("data/optuna_importances.png", dpi=300, bbox_inches="tight")
+        plt.savefig(f"data/{diff}/optuna_importances.png", dpi=300, bbox_inches="tight")
         plt.close()
 
         # 2. Wechselwirkungen (Contour) plotten
         vis.plot_contour(study)
         fig = plt.gcf()
         fig.set_size_inches(12, 10)
-        plt.savefig("data/optuna_contour.png", dpi=300, bbox_inches="tight")
+        plt.savefig(f"data/{diff}/optuna_contour.png", dpi=300, bbox_inches="tight")
         plt.close()
 
         # 3. Spezifische Wechselwirkung zwischen Alpha und Beta plotten
         vis.plot_contour(study, params=["alpha", "beta"])
         fig = plt.gcf()
         fig.set_size_inches(7, 6)
-        plt.savefig("data/optuna_contour_alpha_beta.png", dpi=300, bbox_inches="tight")
+        plt.savefig(f"data/{diff}/optuna_contour_alpha_beta.png", dpi=300, bbox_inches="tight")
         plt.close()
 
-        print("Grafiken erfolgreich gespeichert unter:\n"
-              "  - 'data/optuna_importances.png'\n"
-              "  - 'data/optuna_contour.png'\n"
-              "  - 'data/optuna_contour_alpha_beta.png'")
+        print(f"Grafiken erfolgreich gespeichert unter:\n"
+              f"  - 'data/{diff}/optuna_importances.png'\n"
+              f"  - 'data/{diff}/optuna_contour.png'\n"
+              f"  - 'data/{diff}/optuna_contour_alpha_beta.png'")
     except Exception as e:
         print(f"Fehler beim Erzeugen der Grafiken: {e}")
 
