@@ -12,7 +12,7 @@ from problem import DIFFICULTY_CONFIGS
 INPUT_FILE = "data/compare_results.json"
 OUTPUT_DIR = "presentation"
 
-COLORS = {'Beste': '#2ca02c', 'Mittlere': '#ff7f0e', 'Schlechteste': '#d62728'}
+COLORS = {'Konfiguration A': '#2ca02c', 'Konfiguration B': '#ff7f0e', 'Konfiguration C': '#d62728'}
 
 # Einheitlicher Plot-Stil
 plt.rcParams.update({

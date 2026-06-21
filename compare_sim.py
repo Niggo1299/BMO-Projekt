@@ -7,9 +7,9 @@ from item import Item
 from main import construct_solutions_vectorized
 
 CONFIGS = {
-    'Beste': dict(alpha=1.33, beta=25.0, evaporation=0.35, group_size=175),
-    'Mittlere': dict(alpha=1.10, beta=8.00, evaporation=0.4, group_size=90),
-    'Schlechteste': dict(alpha=1.0, beta=4.00, evaporation=0.2, group_size=40),
+    'Konfiguration A': dict(alpha=1.33, beta=25.0, evaporation=0.35, group_size=175),
+    'Konfiguration B': dict(alpha=1.10, beta=8.00, evaporation=0.4, group_size=90),
+    'Konfiguration C': dict(alpha=1.0, beta=4.00, evaporation=0.2, group_size=40),
 }
 
 NUM_RUNS = 10
